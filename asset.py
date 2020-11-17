@@ -1,8 +1,10 @@
 from typing import Union
 
+from sqlalchemy.engine import RowProxy
+
 
 class Asset:
-    def __init__(self, data: Union[dict, tuple], date: str = None):
+    def __init__(self, data: Union[dict, RowProxy], date: str = None):
         if isinstance(data, dict):
             self.label = data['LABEL']['value']
             self.id = int(data['ASSET_DATABASE_ID']['value'])
@@ -15,7 +17,7 @@ class Asset:
             else:
                 self.currency = None
                 self.close = None
-        elif isinstance(data, tuple):
+        elif isinstance(data, RowProxy):
             self.id = data[0]
             self.label = data[1]
             self.type = data[2]
@@ -23,4 +25,4 @@ class Asset:
 
 
     def __str__(self):
-        return f'{self.label} | {self.type} | {self.id} | {self.close} | {self.currency} | {self.date}'
+        return f'{self.label} | {self.type} | {self.id} | {self.currency}'

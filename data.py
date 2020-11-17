@@ -1,11 +1,7 @@
-import datetime
 import json
-from datetime import date
-
-import requests
 from os import getenv
 
-from pandas import DataFrame
+import requests
 
 from asset import Asset
 from portfolio import Portfolio
@@ -31,9 +27,6 @@ def get_quote(start_date: str, end_date: str, asset: Asset) -> [Quote]:
 
 
 def get_data_dataframe(start_date: str, end_date: str):
-    # start = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-    # end = datetime.datetime.strptime(end_date, '%Y-%m-%d')
-    # delta = datetime.timedelta(days=1)
     assets = get_assets(start_date)
     data = []
     for asset in assets:
@@ -43,13 +36,6 @@ def get_data_dataframe(start_date: str, end_date: str):
 
     return data
 
-    # while start != end:
-    #     if start.weekday() not in [5, 6]:
-    #         for asset in assets:
-    #             get_quote()
-    #
-    #         assets = get_assets(start.strftime('%Y-%m-%d'))
-    #     start += delta
 
 def get_ratios():
     res = requests.get(URL + '/ratio', auth=AUTH)

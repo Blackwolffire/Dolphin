@@ -44,8 +44,19 @@ class Database:
 
     def get_assets(self):
         cmd = self.asset_table.select()
-        return [Asset(x) for x in self.db_engine.execute(cmd).fetchall()]
+        res = self.db_engine.execute(cmd)
+        assets = []
+        for asset in res.fetchall():
+            assets.append(Asset(data=asset))
+        return assets
 
-
-    def get_quotes(self, assets: [Asset], start_date: str, end_date: str) -> DataFrame:
-        pass
+    def get_quotes(self, assets: list, start_date: str, end_date: str):
+        asset_ids = [x.id for x in assets]
+        cmd = self.quote_table.select().where(self.quote_table.c.asset_id.in_(asset_ids))
+        print(cmd)
+        res = self.db_engine.execute(cmd)
+        quotes = []
+        for quote in res.fetchall():
+            print(quote)
+            quotes.append(Quote(data=quote))
+        return quotes

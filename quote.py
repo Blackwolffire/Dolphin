@@ -1,16 +1,26 @@
 import datetime
+from typing import Union
+
+from sqlalchemy.engine import RowProxy
 
 
 class Quote:
-    def __init__(self, data: dict):
-        self.date = data['date']['value'] if 'date' in data else None
-        self.nav = data['nav']['value'] if 'nav' in data else None
-        self.gross = data['gross']['value'] if 'gross' in data else None
-        self.real_close_price = data['real_close_price']['value'] if 'real_close_price' in data else None
-        self.feed_source = data['feed_source']['value'] if 'feed_source' in data else None
-        self.asset = int(data['asset']['value']) if 'asset' in data else None
-        self.pl = data['pl']['value'] if 'pl' in data else None
-        self.close = float(data['close']['value'].replace(',', '.')) if 'close' in data else None
-        self.return_value = data['return']['value']if 'return' in data else None
+    def __init__(self, data: Union[dict, RowProxy]):
+        if isinstance(data, dict):
+            self.date = data.get('date', data).get('value', None)
+            self.nav = data.get('nav', data).get('value', None)
+            self.gross = data.get('gross', data).get('value', None)
+            self.real_close_price = data.get('real_close_price', data).get('value', None)
+            self.feed_source = data.get('feed_source', data).get('value', None)
+            self.asset = int(data.get('asset', data).get('value', -1))
+            self.pl = float(data.get('pl', data).get('value', -1))
+            self.close = float(data.get('close', data).get('value', -1))
+            self.return_value = float(data.get('return_value', data).get('value', -1))
 
-        self.date = datetime.datetime.strptime(self.date, '%Y-%m-%d')
+            # Convert date to datetime
+            self.date = datetime.datetime.strptime(self.date, '%Y-%m-%d')
+        elif isinstance(data, RowProxy):
+            self.asset = data[0]
+            self.date = data[1]
+            self.close = data[2]
+
