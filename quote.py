@@ -1,3 +1,6 @@
+import datetime
+
+
 class Quote:
     def __init__(self, data: dict):
         self.date = data['date']['value'] if 'date' in data else None
@@ -7,6 +10,7 @@ class Quote:
         self.feed_source = data['feed_source']['value'] if 'feed_source' in data else None
         self.asset = int(data['asset']['value']) if 'asset' in data else None
         self.pl = data['pl']['value'] if 'pl' in data else None
-        self.close = data['close']['value'] if 'close' in data else None
+        self.close = float(data['close']['value'].replace(',', '.')) if 'close' in data else None
         self.return_value = data['return']['value']if 'return' in data else None
 
+        self.date = datetime.datetime.strptime(self.date, '%Y-%m-%d')
