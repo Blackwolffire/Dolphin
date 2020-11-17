@@ -53,6 +53,10 @@ class Database:
     def get_quotes(self, assets: list, start_date: str, end_date: str):
         asset_ids = [x.id for x in assets]
         cmd = self.quote_table.select().where(self.quote_table.c.asset_id.in_(asset_ids))
+        if start_date:
+            cmd = cmd.where(self.quote_table.c.date >= start_date)
+        if end_date:
+            cmd = cmd.where(self.quote_table.c.date <= end_date)
         print(cmd)
         res = self.db_engine.execute(cmd)
         quotes = []
