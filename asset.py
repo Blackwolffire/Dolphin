@@ -1,7 +1,7 @@
 class Asset:
     def __init__(self, data: dict, date: str):
         self.label = data['LABEL']['value']
-        self.id = data['ASSET_DATABASE_ID']['value']
+        self.id = int(data['ASSET_DATABASE_ID']['value'])
         self.type = data['TYPE']['value']
         self.date = date
         if 'LAST_CLOSE_VALUE_IN_CURR' in data:

@@ -1,6 +1,14 @@
+import datetime
+import json
+from datetime import date
+
 import requests
 from os import getenv
+
+from pandas import DataFrame
+
 from asset import Asset
+from portfolio import Portfolio
 from quote import Quote
 from ratio import Ratio
 
@@ -17,16 +25,55 @@ def get_assets(date: str) -> [Asset]:
     return [Asset(x, date) for x in res.json()]
 
 
-def get_quote(start: str, end: str, asset: Asset) -> [Quote]:
-    res = requests.get(URL + f'/asset/{asset.id}/quote?start_date={start}&end_date={end}', auth=AUTH)
+def get_quote(start_date: str, end_date: str, asset: Asset) -> [Quote]:
+    res = requests.get(URL + f'/asset/{asset.id}/quote?start_date={start_date}&end_date={end_date}', auth=AUTH)
     return [Quote(x) for x in res.json()]
 
+
+def get_data_dataframe(start_date: str, end_date: str):
+    # start = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    # end = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+    # delta = datetime.timedelta(days=1)
+    assets = get_assets(start_date)
+    data = []
+    for asset in assets:
+        if asset.currency:
+            for quote in get_quote(start_date, end_date, asset):
+                data.append((quote.asset, quote.date, quote.real_close_price))
+
+    return data
+
+    # while start != end:
+    #     if start.weekday() not in [5, 6]:
+    #         for asset in assets:
+    #             get_quote()
+    #
+    #         assets = get_assets(start.strftime('%Y-%m-%d'))
+    #     start += delta
 
 def get_ratios():
     res = requests.get(URL + '/ratio', auth=AUTH)
     return [Ratio(x) for x in res.json()]
 
 
-def get_porfolio(asset: Asset):
+def get_portfolio(asset: Asset) -> Portfolio:
     res = requests.get(URL + f'/portfolio/{asset.id}/dyn_amount_compo', auth=AUTH)
-    return res.json()
+    return Portfolio(res.json(), asset)
+
+
+def update_portfolio(portfolio: Portfolio) -> bool:
+    res = requests.put(URL + f'/portfolio/{portfolio.asset.id}/dyn_amount_compo', auth=AUTH, data=portfolio.json())
+    return res.status_code == 200
+
+
+def calculate_sharpe_ratio(asset: Asset, start_date: str, end_date: str):
+    payload = json.dumps({
+        '_ratio': [9, 12, 10],
+        '_asset': [asset.id],
+        '_bench': None,
+        '_startDate': start_date,
+        '_endDate': end_date,
+        '_frequency': None
+    })
+    res = requests.post(URL + '/ratio/invoke', data=payload, auth=AUTH)
+    return res
