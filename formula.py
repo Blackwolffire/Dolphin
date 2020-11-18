@@ -60,7 +60,7 @@ def compute_portfolio_sharpe_ratio(portfolio: Portfolio, start_date: str, end_da
     while start != end:
         print(start)
         daily_nav, daily_return = compute_nav(portfolio, start.strftime('%Y-%m-%d'), db)
-        if daily_nav is None and daily_nav is None:
+        if start.weekday() in [5, 6] or (daily_nav is None and daily_nav is None):
             start += delta
             continue
         quote = Quote(None)
