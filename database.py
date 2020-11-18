@@ -79,6 +79,7 @@ class Database:
         for column in self.quote_table.columns:
             if column.name != 'asset_id':
                 columns.append(column)
+        print(columns)
         cmd = select(columns).where(self.quote_table.c.asset_id.in_(asset_ids))
         if start_date:
             cmd = cmd.where(self.quote_table.c.date >= start_date)
@@ -93,7 +94,7 @@ class Database:
             quotes.append(Quote(data=quote) if not data_frame else quote)
         if data_frame:
             df = DataFrame(quotes)
-            df = df.rename(columns={0: 'asset', 1: 'date', 2: 'price'})
+            df = df.rename(columns={0: 'asset', 1: 'date', 2: 'nav', 3: 'gross', 4: 'real_close_price', 5: 'pl', 6: 'feed_source', 7: 'return', 8: 'close'})
             df = df.set_index('date')
             df = df.sort_index()
             return df
