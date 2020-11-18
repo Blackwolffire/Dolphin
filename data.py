@@ -26,17 +26,6 @@ def get_quote(start_date: str, end_date: str, asset: Asset) -> [Quote]:
     return [Quote(x) for x in res.json()]
 
 
-def get_data_dataframe(start_date: str, end_date: str):
-    assets = get_assets(start_date)
-    data = []
-    for asset in assets:
-        if asset.currency:
-            for quote in get_quote(start_date, end_date, asset):
-                data.append((quote.asset, quote.date, quote.real_close_price))
-
-    return data
-
-
 def get_ratios():
     res = requests.get(URL + '/ratio', auth=AUTH)
     return [Ratio(x) for x in res.json()]
@@ -52,14 +41,28 @@ def update_portfolio(portfolio: Portfolio) -> bool:
     return res.status_code == 200
 
 
-def calculate_sharpe_ratio(asset: Asset, start_date: str, end_date: str):
-    payload = json.dumps({
-        '_ratio': [9, 12, 10],
-        '_asset': [asset.id],
-        '_bench': None,
-        '_startDate': start_date,
-        '_endDate': end_date,
-        '_frequency': None
-    })
-    res = requests.post(URL + '/ratio/invoke', data=payload, auth=AUTH)
+def calculate_ratio(assets: [Asset], ratios: [Ratio], start_date: str, end_date: str):
+    payload = {
+        'ratio': [x.id for x in ratios],
+        'asset': [x.id for x in assets],
+        'bench': None,
+        'start_date': start_date,
+        'end_date': end_date,
+        'frequency': None
+    }
+
+    res = requests.post(URL + '/ratio/invoke', data=json.dumps(payload), auth=AUTH)
+    ratio_res = {}
+    for asset_id, ratios in res.json().items():
+        if asset_id not in ratios:
+            ratio_res[asset_id] = []
+        for ratio_id, value in ratios.items():
+            ratio_res[asset_id].append({ratio_id: float(value['value'].replace(',', '.'))})
+
+    return ratio_res
+
+
+def get_currency_rate(src: str, dst: str, date: str):
+    payload = {'fullResponse': True, 'date': date}
+    res = requests.get(URL + f'/currency/rate/{src}/to/{dst}', auth=AUTH, params=payload)
     return res
