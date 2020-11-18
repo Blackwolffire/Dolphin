@@ -1,5 +1,6 @@
+import datetime
+
 from pandas import DataFrame
-from os import getenv
 from sqlalchemy import create_engine, MetaData, Table, Column, Float, Date, Integer, String, ForeignKey, select
 
 from asset import Asset
@@ -12,6 +13,7 @@ class Database:
         self.db_engine = create_engine(engine_url)
         self.quote_table = None
         self.asset_table = None
+        self.currency_table = None
         self.create_tables()
 
     def create_tables(self):
@@ -34,6 +36,12 @@ class Database:
                                 Column('return_value', Float),
                                 Column('close', Float)
                                 )
+        self.currency_table = Table('currency', metadata,
+                                    Column('currency_src', String),
+                                    Column('currency_dst', String),
+                                    Column('value', Float),
+                                    Column('date', Date)
+                                    )
 
         try:
             metadata.create_all(self.db_engine)
@@ -44,6 +52,26 @@ class Database:
     def add_asset(self, asset: Asset):
         cmd = self.asset_table.insert().values(id=asset.id, label=asset.label, type=asset.type, currency=asset.currency)
         self.db_engine.execute(cmd)
+
+    def add_currency(self, src: str, dst: str, date, value: float):
+        if src == dst:
+            print('Src cannot be dst!')
+            return
+        cmd = self.currency_table.insert().values(currency_src=src,
+                                                  currency_dst=dst,
+                                                  date=date,
+                                                  value=value)
+        self.db_engine.execute(cmd)
+
+    def get_rate(self, src: str, dst: str, date: str):
+        cmd = self.currency_table.select().where(
+            (self.currency_table.c.currency_src == src) &
+            (self.currency_table.c.currency_dst == dst) &
+            (self.currency_table.c.date == date)
+        )
+        res = self.db_engine.execute(cmd)
+        rate = res.fetchall()
+        return rate[3]
 
     def add_quote(self, quote: Quote):
         cmd = self.quote_table.insert().values(
@@ -73,13 +101,12 @@ class Database:
         asset = res.fetchall()
         return Asset(data=asset[0])
 
-    def get_quotes(self, assets: list, start_date: str, end_date: str, data_frame=False):
+    def get_quotes(self, assets: [Asset], start_date: str, end_date: str, data_frame=False):
         asset_ids = [x.id for x in assets]
         columns = [self.quote_table.c.asset_id if not data_frame else self.asset_table.c.label]
         for column in self.quote_table.columns:
             if column.name != 'asset_id':
                 columns.append(column)
-        print(columns)
         cmd = select(columns).where(self.quote_table.c.asset_id.in_(asset_ids))
         if start_date:
             cmd = cmd.where(self.quote_table.c.date >= start_date)

@@ -13,6 +13,9 @@ URL = 'https://dolphin.jump-technology.com:8443/api/v1'
 USERNAME = getenv('DOLPHIN_USERNAME', None)
 PASSWORD = getenv('DOLPHIN_PASSWORD', None)
 
+START_DATE = '2016-06-01'
+END_DATE = '2020-10-23'
+
 AUTH = (USERNAME, PASSWORD)
 
 
@@ -65,4 +68,6 @@ def calculate_ratio(assets: [Asset], ratios: [Ratio], start_date: str, end_date:
 def get_currency_rate(src: str, dst: str, date: str):
     payload = {'fullResponse': True, 'date': date}
     res = requests.get(URL + f'/currency/rate/{src}/to/{dst}', auth=AUTH, params=payload)
-    return res
+    return float(res.json()['rate']['value'].replace(',', '.'))
+
+
