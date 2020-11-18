@@ -1,5 +1,5 @@
 from pandas import DataFrame
-import pandas as pd
+from os import getenv
 from sqlalchemy import create_engine, MetaData, Table, Column, Float, Date, Integer, String, ForeignKey, select
 
 from asset import Asset
@@ -65,6 +65,13 @@ class Database:
         for asset in res.fetchall():
             assets.append(Asset(data=asset))
         return assets
+
+    def get_portfolio_asset(self) -> Asset:
+        name = 'EPITA_PTF_12'
+        cmd = self.asset_table.select().where(self.asset_table.c.label == name)
+        res = self.db_engine.execute(cmd)
+        asset = res.fetchall()
+        return Asset(data=asset[0])
 
     def get_quotes(self, assets: list, start_date: str, end_date: str, data_frame=False):
         asset_ids = [x.id for x in assets]
