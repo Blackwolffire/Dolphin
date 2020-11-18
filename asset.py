@@ -4,7 +4,7 @@ from sqlalchemy.engine import RowProxy
 
 
 class Asset:
-    def __init__(self, data: Union[dict, RowProxy], date: str = None):
+    def __init__(self, data: Union[dict, RowProxy, int], date: str = None):
         if isinstance(data, dict):
             self.label = data['LABEL']['value']
             self.id = int(data['ASSET_DATABASE_ID']['value'])
@@ -22,6 +22,8 @@ class Asset:
             self.label = data[1]
             self.type = data[2]
             self.currency = data[3]
+        elif isinstance(data, int):
+            self.id = data
 
 
     def __str__(self):

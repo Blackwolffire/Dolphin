@@ -70,7 +70,7 @@ class Database:
         )
         res = self.db_engine.execute(cmd)
         rate = res.fetchall()
-        return rate[3]
+        return rate[0][2]
 
     def add_quote(self, quote: Quote):
         cmd = self.quote_table.insert().values(
@@ -100,12 +100,21 @@ class Database:
         asset = res.fetchall()
         return Asset(data=asset[0])
 
+    def get_test_portfolio(self) -> Asset:
+        name = 'CUSTOM_PORTFOLIO'
+        cmd = self.asset_table.select().where(self.asset_table.c.label == name)
+        res = self.db_engine.execute(cmd)
+        asset = res.fetchall()
+        return Asset(data=asset[0])
+
     def get_quotes(self, assets: [Asset], start_date: str, end_date: str, data_frame=False):
         asset_ids = [x.id for x in assets]
-        columns = [self.quote_table.c.asset_id if not data_frame else self.asset_table.c.label]
+        columns = [self.quote_table.c.asset_id]
         for column in self.quote_table.columns:
             if column.name != 'asset_id':
                 columns.append(column)
+        if data_frame:
+            columns.append(self.asset_table.c.currency)
         cmd = select(columns).where(self.quote_table.c.asset_id.in_(asset_ids))
         if start_date:
             cmd = cmd.where(self.quote_table.c.date >= start_date)
@@ -118,9 +127,9 @@ class Database:
         quotes = []
         for quote in res.fetchall():
             quotes.append(Quote(data=quote) if not data_frame else quote)
-        if data_frame:
+        if data_frame and len(quotes) > 0:
             df = DataFrame(quotes)
-            df = df.rename(columns={0: 'asset', 1: 'date', 2: 'nav', 3: 'gross', 4: 'real_close_price', 5: 'pl', 6: 'feed_source', 7: 'return', 8: 'close'})
+            df = df.rename(columns={0: 'asset', 1: 'date', 2: 'nav', 3: 'gross', 4: 'real_close_price', 5: 'pl', 6: 'feed_source', 7: 'return', 8: 'close', 9: 'currency'})
             df = df.set_index('date')
             df = df.sort_index()
             return df

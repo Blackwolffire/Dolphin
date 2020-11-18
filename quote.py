@@ -30,3 +30,13 @@ class Quote:
             self.date = data[1]
             self.close = data[2]
 
+    def create_custom(self, date, nav: float, return_value: float, asset_id: int):
+        self.date = date
+        self.nav = nav
+        self.gross = nav
+        self.close = nav
+        self.real_close_price = nav
+        self.feed_source = -42
+        self.asset = asset_id
+        self.return_value = return_value
+        self.pl = 0

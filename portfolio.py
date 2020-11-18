@@ -12,8 +12,8 @@ class Portfolio:
         self.asset = asset
 
     def add_asset(self, asset: Asset, quantity: int):
-        if '2013-06-14' not in self.values:
-            self.values['2013-06-14'] = []
+        if '2016-06-01' not in self.values:
+            self.values['2016-06-01'] = []
 
         self.values['2013-06-14'].append({
             'asset': {'asset': asset.id, 'quantity': quantity}
