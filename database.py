@@ -37,7 +37,6 @@ class Database:
 
         try:
             metadata.create_all(self.db_engine)
-            print("Tables created")
         except Exception as e:
             print(f"Cannot create table: {e}")
 
@@ -79,7 +78,7 @@ class Database:
         for column in self.quote_table.columns:
             if column.name != 'asset_id':
                 columns.append(column)
-        print(columns)
+
         cmd = select(columns).where(self.quote_table.c.asset_id.in_(asset_ids))
         if start_date:
             cmd = cmd.where(self.quote_table.c.date >= start_date)
