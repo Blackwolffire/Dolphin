@@ -22,6 +22,8 @@ class Asset:
             self.label = data[1]
             self.type = data[2]
             self.currency = data[3]
+            self.sharpe = data[4]
+
         elif isinstance(data, int):
             self.id = data
 

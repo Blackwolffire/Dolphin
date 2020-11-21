@@ -22,26 +22,35 @@ class Database:
                                  Column('id', Integer, primary_key=True),
                                  Column('label', String, nullable=True),
                                  Column('type', String, nullable=True),
-                                 Column('currency', String, nullable=True)
+                                 Column('currency', String, nullable=True),
+                                 Column('sharpe', Float),
+                                 Column('sharpe_custom', Float),
+                                 Column('return_', Float),
+                                 Column('ann_return', Float)
                                  )
 
         self.quote_table = Table('quote', metadata,
-                                Column('asset_id', None, ForeignKey("asset.id")),
-                                Column('date', Date),
-                                Column('nav', Float),
-                                Column('gross', Float),
-                                Column('real_close_price', Float),
-                                Column('pl', Float),
-                                Column('feed_source', Float),
-                                Column('return_value', Float),
-                                Column('close', Float)
-                                )
+                                 Column('asset_id', None, ForeignKey("asset.id")),
+                                 Column('date', Date),
+                                 Column('nav', Float),
+                                 Column('gross', Float),
+                                 Column('real_close_price', Float),
+                                 Column('pl', Float),
+                                 Column('feed_source', Float),
+                                 Column('return_value', Float),
+                                 Column('close', Float)
+                                 )
         self.currency_table = Table('currency', metadata,
                                     Column('currency_src', String),
                                     Column('currency_dst', String),
                                     Column('value', Float),
                                     Column('date', Date)
                                     )
+
+        self.correlation_matrix_table = Table('correlation_matrix', metadata,
+                                              Column('asset_left', Integer),
+                                              Column('asset_right', Integer),
+                                              Column('correlation', Float))
 
         try:
             metadata.create_all(self.db_engine)
@@ -50,6 +59,28 @@ class Database:
 
     def add_asset(self, asset: Asset):
         cmd = self.asset_table.insert().values(id=asset.id, label=asset.label, type=asset.type, currency=asset.currency)
+        self.db_engine.execute(cmd)
+
+    def add_correlation(self, asset1: Asset, asset2: Asset, correlation: float):
+        cmd = self.correlation_matrix_table.insert().values(asset_left=asset1.id, asset_right=asset2.id, correlation=correlation)
+        self.db_engine.execute(cmd)
+
+    def get_correlation(self, asset1: Asset, asset2: Asset) -> float:
+        cmd = self.correlation_matrix_table.select(self.correlation_matrix_table.c.correlation)
+        res = self.db_engine.execute(cmd)
+        corr = res.fetchall()
+        return corr[0]
+
+    def update_asset_sharpe(self, asset: Asset, sharpe: float, custom=False):
+        if not custom:
+            cmd = self.asset_table.update().where(self.asset_table.c.id == asset.id).values(sharpe=sharpe)
+        else:
+            cmd = self.asset_table.update().where(self.asset_table.c.id == asset.id).values(sharpe_custom=sharpe)
+        self.db_engine.execute(cmd)
+
+    def update_asset_returns(self, asset: Asset, return_: float, ann_return: float):
+        cmd = self.asset_table.update().where(self.asset_table.c.id == asset.id).values(return_=return_,
+                                                                                        ann_return=ann_return)
         self.db_engine.execute(cmd)
 
     def add_currency(self, src: str, dst: str, date, value: float):
@@ -85,12 +116,23 @@ class Database:
             return_value=quote.return_value)
         self.db_engine.execute(cmd)
 
-    def get_assets(self):
-        cmd = self.asset_table.select()
+    def get_assets(self, data_frame=False):
+        cmd = self.asset_table.select().order_by(self.asset_table.c.label)
         res = self.db_engine.execute(cmd)
         assets = []
         for asset in res.fetchall():
-            assets.append(Asset(data=asset))
+            if data_frame:
+                a = asset
+            else:
+                a = Asset(data=asset)
+            assets.append(a)
+        if data_frame:
+            df = DataFrame(assets)
+            df = df.rename(columns={0: 'id', 1: 'label', 2: 'type', 3: 'currency', 4: 'sharpe', 5: 'custom_sharpe', 6: 'return', 7: 'ann_return'})
+            df = df.set_index('id')
+            df = df.sort_index()
+            return df
+
         return assets
 
     def get_portfolio_asset(self) -> Asset:
@@ -129,7 +171,9 @@ class Database:
             quotes.append(Quote(data=quote) if not data_frame else quote)
         if data_frame and len(quotes) > 0:
             df = DataFrame(quotes)
-            df = df.rename(columns={0: 'asset', 1: 'date', 2: 'nav', 3: 'gross', 4: 'real_close_price', 5: 'pl', 6: 'feed_source', 7: 'return', 8: 'close', 9: 'currency'})
+            df = df.rename(
+                columns={0: 'asset', 1: 'date', 2: 'nav', 3: 'gross', 4: 'real_close_price', 5: 'pl', 6: 'feed_source',
+                         7: 'return', 8: 'close', 9: 'currency'})
             df = df.set_index('date')
             df = df.sort_index()
             return df

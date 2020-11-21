@@ -34,6 +34,10 @@ def get_ratios():
     return [Ratio(x) for x in res.json()]
 
 
+def get_sharpe_ratio():
+    return get_ratios()[6]
+
+
 def get_portfolio(asset: Asset) -> Portfolio:
     res = requests.get(URL + f'/portfolio/{asset.id}/dyn_amount_compo', auth=AUTH)
     return Portfolio(res.json(), asset)
@@ -58,9 +62,9 @@ def calculate_ratio(assets: [Asset], ratios: [Ratio], start_date: str, end_date:
     ratio_res = {}
     for asset_id, ratios in res.json().items():
         if asset_id not in ratios:
-            ratio_res[asset_id] = []
+            ratio_res[asset_id] = {}
         for ratio_id, value in ratios.items():
-            ratio_res[asset_id].append({ratio_id: float(value['value'].replace(',', '.'))})
+            ratio_res[asset_id][ratio_id] = float(value['value'].replace(',', '.'))
 
     return ratio_res
 
