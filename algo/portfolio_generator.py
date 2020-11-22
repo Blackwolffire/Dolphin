@@ -1,8 +1,3 @@
-"""
-- 15 meilleur sharp
-- ajouter un des meilleur sharp décorélé
-- envoyer à Andre
-"""
 import heapq
 
 from algo.asset import Asset
@@ -11,7 +6,7 @@ from algo.database import Database
 from algo.formula import compute_sharp_ratio
 
 NB_BASE_ASSET = 15
-CORRELATION_THRESHOLD = -0.8
+CORRELATION_THRESHOLD = -0.1
 
 
 class PortfolioGenerator:
@@ -33,8 +28,8 @@ class PortfolioGenerator:
             (sharpe, asset) = heapq._heappop_max(self.sharpes)
             correlation = []
             for i in range(NB_BASE_ASSET):
-                correlation.append(compute_sharp_ratio(self.portfolio[i][1], asset, START_DATE, END_DATE, db))
-            if sum(correlation) / len(correlation) <= 0.8:
+                correlation.append(compute_correlation(self.portfolio[i][1], asset, START_DATE, END_DATE, db))
+            if sum(correlation) / len(correlation) <= CORRELATION_THRESHOLD:
                 self.portfolio.append((sharpe, asset))
                 yield self.portfolio
                 self.portfolio.pop()

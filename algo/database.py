@@ -81,7 +81,7 @@ class Database:
         cmd = self.correlation_matrix_table.select().where(
             (self.correlation_matrix_table.c.asset_left == asset_id) |
             (self.correlation_matrix_table.c.asset_right == asset_id)
-        )
+        ).order_by(self.correlation_matrix_table.c.correlation)
         if inverse:
             cmd = cmd.where(self.correlation_matrix_table.c.correlation < 0)
         else:
@@ -89,7 +89,7 @@ class Database:
 
         res = self.db_engine.execute(cmd)
         # return res.fetchall()
-        return [x[0] if x[1] == asset_id else x[1] for x in res.fetchall()]
+        return [(x[0], x[2]) if x[1] == asset_id else (x[1], x[2]) for x in res.fetchall()]
 
     def update_asset_sharpe(self, asset: Asset, sharpe: float, custom=False):
         if not custom:
@@ -143,7 +143,7 @@ class Database:
         if assets:
             cmd = cmd.where(self.asset_table.c.id.in_(assets))
 
-        print(cmd)
+        #print(cmd)
         res = self.db_engine.execute(cmd)
         assets = []
         for asset in res.fetchall():
