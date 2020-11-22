@@ -15,7 +15,7 @@ client = InfluxDBClient('influxdb',
 
 
 def get_new_job() -> dict:
-    res = requests.get('http://manager/new_pf')
+    res = requests.get('http://127.0.0.1:8000/new_pf')
     if res.status_code != 200:
         return {}
     return res.json()  # {'pf_id', 'assets': [{'asset_id': qty}, {...}]}
@@ -27,7 +27,7 @@ def compute_sharpe(pf: dict) -> float:
 
 
 def upload_result(pf_id: int, sharpe: float):
-    res = requests.post(f'http://manager/pf_sharpe/{pf_id}', data={'sharpe': sharpe})
+    res = requests.post(f'http://127.0.0.1:8000/pf_sharpe/{pf_id}', data={'sharpe': sharpe})
     if res.status_code != 200:
         return False
     return True

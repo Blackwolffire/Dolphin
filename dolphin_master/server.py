@@ -30,11 +30,12 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_json(message)
 
+
 manager = ConnectionManager()
 
+
 def get_best_portfolios():
-    best_pfs = db.get_best_portfolios()
-    return best_pfs[0]['sharpe']
+    return db.get_best_portfolios()
 
 
 def get_metrics():
@@ -43,10 +44,10 @@ def get_metrics():
 
 def get_info() -> dict:
     metrics = get_metrics()
-    best_pfs = get_best_portfolios()
+    best_pf = get_best_portfolios()[0]
     info = {
-        'best_sharpe': best_pfs[0]['sharpe'],
-        'best_portfolios': best_pfs,
+        'best_sharpe': best_pf[3],
+        'best_portfolio': db.get_portfolio(best_pf[0]).get_assets(),
         'current_rate': metrics.get('current_rate', 0),
         'total_calculated': metrics.get('total', 0),
         'mean': metrics.get('mean', 0),
@@ -55,8 +56,8 @@ def get_info() -> dict:
     return info
 
 
-@app.websocket('/info')
-async def return_info(websocket: WebSocket):
+@app.websocket('/info/{ts}')
+async def return_info(websocket: WebSocket, ts: float):
     await manager.connect(websocket)
     try:
         while True:
@@ -69,7 +70,7 @@ async def return_info(websocket: WebSocket):
 @app.get('/new_pf')
 def dispatch_portfolio():
     new_pf = new_pfs.pop()
-    id = db.store_portfolio(new_pf)  # Store current time
+    id = db.store_portfolio(new_pf)
     return {'id': id, 'assets': new_pf.assets()}
 
 

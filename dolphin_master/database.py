@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import time
 from sqlalchemy import create_engine, MetaData, Table, Column, Float, Date, Integer, String, ForeignKey, select, func
 import os
 
@@ -12,7 +11,8 @@ class Database:
     def __init__(self):
         username = os.getenv('PSQL_USERNAME')
         password = os.getenv('PSQL_PASSWORD')
-        engine_url = f'postgresql://{username}:{password}@posgtres:5432/portfolios'
+        # engine_url = f'postgresql://{username}:{password}@posgtres:5432/portfolios'
+        engine_url = f'sqlite:///test.sqlite'
         self.db_engine = create_engine(engine_url)
         self.portfolio_table = None
         self.asset_table = None
@@ -22,9 +22,10 @@ class Database:
         metadata = MetaData()
         self.portfolio_table = Table('portfolio', metadata,
                                  Column('id', Integer, primary_key=True),
-                                 Column('created', Date, nullable=False),
-                                 Column('finished', String, nullable=True),
+                                 Column('created', Float, nullable=False),
+                                 Column('finished', Float, nullable=True),
                                  Column('sharpe', Float, nullable=True),
+                                 Column('custom_sharpe', Float, nullable=True),
                                  Column('return', Float, nullable=True),
                                  )
 
@@ -40,23 +41,31 @@ class Database:
             print(f"Cannot create table: {e}")
 
     def store_portfolio(self, portfolio: Portfolio):
-        created = datetime.now()
+        created = time.time()
         cmd = self.portfolio_table.insert().values(created=created)
         res = self.db_engine.execute(cmd)
-        id = res.fetchall()[0]
+        id = res.lastrowid
         for asset in portfolio.get_assets():
-            a = asset['asset']
-            self.store_asset(id, a['asset'], a['quantity'])
+            self.store_asset(id, asset[0], asset[1])
 
         return id
+
+    def get_portfolio(self, pf_id: int):
+        pf = Portfolio()
+        pf.id = pf_id
+        cmd = self.asset_table.select().where(self.asset_table.c.portfolio_id == pf_id)
+        res = self.db_engine.execute(cmd)
+        for asset in res.fetchall():
+            pf.add_asset(asset[1], asset[2])
+        return pf
 
     def store_asset(self, pf_id: int, asset_id: int, quantity: float):
         cmd = self.asset_table.insert().values(portfolio_id=pf_id, asset_id=asset_id, quantity=quantity)
         self.db_engine.execute(cmd)
 
-    def update_portfolio(self, pf_id: int, sharpe: float):
-        finished = datetime.now()
-        cmd = self.portfolio_table.update().where(id == pf_id).values(finished=finished, sharpe=sharpe)
+    def update_portfolio(self, pf_id: int, sharpe: float, custom_sharpe: float):
+        finished = time.time()
+        cmd = self.portfolio_table.update().where(self.portfolio_table.c.id == pf_id).values(finished=finished, sharpe=sharpe, custom_sharpe=custom_sharpe)
         self.db_engine.execute(cmd)
 
     def get_best_portfolios(self):

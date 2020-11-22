@@ -1,3 +1,5 @@
+from typing import Union
+
 from pandas import DataFrame
 from sqlalchemy import create_engine, MetaData, Table, Column, Float, Date, Integer, String, ForeignKey, select
 
@@ -63,11 +65,31 @@ class Database:
         cmd = self.correlation_matrix_table.insert().values(asset_left=asset1.id, asset_right=asset2.id, correlation=correlation)
         self.db_engine.execute(cmd)
 
-    def get_correlation(self, asset1: Asset, asset2: Asset) -> float:
-        cmd = self.correlation_matrix_table.select(self.correlation_matrix_table.c.correlation)
+    def get_correlation(self, asset1: Union[Asset, int], asset2: Union[Asset, int]) -> float:
+        a1 = asset1 if isinstance(asset1, int) else asset1.id
+        a2 = asset2 if isinstance(asset2, int) else asset2.id
+        cmd = self.correlation_matrix_table.select(self.correlation_matrix_table.c.correlation).where(
+            (self.correlation_matrix_table.c.asset_left == a1) &
+            (self.correlation_matrix_table.c.asset_right == a2)
+        )
         res = self.db_engine.execute(cmd)
         corr = res.fetchall()
-        return corr[0]
+        return corr[0][2]
+
+    def get_correlated(self, asset: Union[Asset, int], inverse=True):
+        asset_id = asset if isinstance(asset, int) else asset.id
+        cmd = self.correlation_matrix_table.select().where(
+            (self.correlation_matrix_table.c.asset_left == asset_id) |
+            (self.correlation_matrix_table.c.asset_right == asset_id)
+        )
+        if inverse:
+            cmd = cmd.where(self.correlation_matrix_table.c.correlation < 0)
+        else:
+            cmd = cmd.where(self.correlation_matrix_table.c.correlation >= 0)
+
+        res = self.db_engine.execute(cmd)
+        # return res.fetchall()
+        return [x[0] if x[1] == asset_id else x[1] for x in res.fetchall()]
 
     def update_asset_sharpe(self, asset: Asset, sharpe: float, custom=False):
         if not custom:
@@ -114,8 +136,14 @@ class Database:
             return_value=quote.return_value)
         self.db_engine.execute(cmd)
 
-    def get_assets(self, data_frame=False):
-        cmd = self.asset_table.select().order_by(self.asset_table.c.label)
+    def get_assets(self, data_frame=False, type:Union[str, list] = None, assets: list =None):
+        cmd = self.asset_table.select().order_by(self.asset_table.c.sharpe.desc())
+        if type:
+            cmd = cmd.where(self.asset_table.c.type.in_(type if isinstance(type, list) else [type]))
+        if assets:
+            cmd = cmd.where(self.asset_table.c.id.in_(assets))
+
+        print(cmd)
         res = self.db_engine.execute(cmd)
         assets = []
         for asset in res.fetchall():
@@ -128,7 +156,7 @@ class Database:
             df = DataFrame(assets)
             df = df.rename(columns={0: 'id', 1: 'label', 2: 'type', 3: 'currency', 4: 'sharpe', 5: 'custom_sharpe', 6: 'return', 7: 'ann_return'})
             df = df.set_index('id')
-            df = df.sort_index()
+            # df = df.sort_index()
             return df
 
         return assets
