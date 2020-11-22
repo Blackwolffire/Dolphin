@@ -29,6 +29,7 @@ def compute_covariance(df1: DataFrame, df2: DataFrame) -> float:
 
 
 def compute_sharp_ratio(asset: Asset, start: str, end: str, db: Database) -> float:
+    print(asset)
     df = db.get_quotes([asset], start, end, data_frame=True)
     xdeb = df.close.iloc[0]
     xfin = df.close.iloc[-1]
@@ -42,14 +43,14 @@ def compute_sharp_ratio(asset: Asset, start: str, end: str, db: Database) -> flo
 
 
 def compute_nav(portfolio: Portfolio, date: str, db: Database):
-    assets = [Asset(x['asset']['asset']) for x in portfolio.values['2013-06-14']]
+    assets = [Asset(x[0]) for x in portfolio.get_assets()]
     df = db.get_quotes(assets, start_date=date, end_date=date, data_frame=True)  # TODO: fetch previous value if 0
     if len(df) == 0:
         return None, None
     df.sort_values(by='asset')
 
     def get_quantity(asset_id):
-        q = [x['asset']['quantity'] for x in portfolio.values['2013-06-14'] if int(x['asset']['asset']) == asset_id]
+        q = [x[1] for x in portfolio.get_assets() if x[0] == asset_id]
         return q[0]
 
     df['quantity'] = df['asset'].apply(get_quantity)
@@ -66,7 +67,6 @@ def compute_nav(portfolio: Portfolio, date: str, db: Database):
 
 
 def compute_portfolio_sharpe_ratio(portfolio: Portfolio, start_date: str, end_date: str, db: Database) -> float:
-    # TODO: delete all previous data in db
     start = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end = datetime.datetime.strptime(end_date, '%Y-%m-%d')
     delta = datetime.timedelta(days=1)
@@ -74,7 +74,6 @@ def compute_portfolio_sharpe_ratio(portfolio: Portfolio, start_date: str, end_da
     asset = db.get_test_portfolio()
 
     while start != end:
-        print(start)
         daily_nav, daily_return = compute_nav(portfolio, start.strftime('%Y-%m-%d'), db)
         if start.weekday() in [5, 6] or (daily_nav is None and daily_nav is None):
             start += delta
