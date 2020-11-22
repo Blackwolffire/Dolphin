@@ -26,7 +26,8 @@ class Database:
                                  Column('sharpe', Float),
                                  Column('sharpe_custom', Float),
                                  Column('return_', Float),
-                                 Column('ann_return', Float)
+                                 Column('ann_return', Float),
+                                 Column('close', Float)
                                  )
 
         self.quote_table = Table('quote', metadata,
@@ -59,6 +60,10 @@ class Database:
 
     def add_asset(self, asset: Asset):
         cmd = self.asset_table.insert().values(id=asset.id, label=asset.label, type=asset.type, currency=asset.currency)
+        self.db_engine.execute(cmd)
+
+    def add_close(self, asset: Asset, close: float):
+        cmd = self.asset_table.update().where(self.asset_table.c.id == asset.id).values(close=close)
         self.db_engine.execute(cmd)
 
     def add_correlation(self, asset1: Asset, asset2: Asset, correlation: float):
@@ -154,9 +159,8 @@ class Database:
             assets.append(a)
         if data_frame:
             df = DataFrame(assets)
-            df = df.rename(columns={0: 'id', 1: 'label', 2: 'type', 3: 'currency', 4: 'sharpe', 5: 'custom_sharpe', 6: 'return', 7: 'ann_return'})
+            df = df.rename(columns={0: 'id', 1: 'label', 2: 'type', 3: 'currency', 4: 'sharpe', 5: 'custom_sharpe', 6: 'return', 7: 'ann_return', 8: 'close'})
             df = df.set_index('id')
-            # df = df.sort_index()
             return df
 
         return assets
