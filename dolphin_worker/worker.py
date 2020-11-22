@@ -1,20 +1,28 @@
-import requests
-import database
-import formula
-import data
-from portfolio import Portfolio
+import os
 
-db = database.Database('new.sqlite')
+import requests
+from algo import formula, database, data
+from algo.portfolio import Portfolio
+
+from influxdb import InfluxDBClient
+db = database.Database('data.sqlite')
+
+client = InfluxDBClient('influxdb',
+                        8086,
+                        os.environ.get("INFLUXDB_USER", "worker"),
+                        os.environ.get("INFLUXDB_USER_PASSWORD", "worker"),
+                        os.environ.get("INFLUXDB_DB", "worker"))
 
 
 def get_new_job() -> dict:
     res = requests.get('http://manager/new_pf')
     if res.status_code != 200:
         return {}
-    return res.json()  # {'pf_id', 'assets': {'asset_id': qty, ...}}
+    return res.json()  # {'pf_id', 'assets': [{'asset_id': qty}, {...}]}
 
 
-def compute_sharpe(pf: Portfolio) -> float:
+def compute_sharpe(pf: dict) -> float:
+    pf = Portfolio.from_dict(pf)
     return formula.compute_portfolio_sharpe_ratio(pf, data.START_DATE, data.END_DATE, db)
 
 
@@ -30,8 +38,22 @@ def work_once():
     if not new_pf:
         return
     sharpe = compute_sharpe(new_pf)
-    upload_result(new_pf.id, sharpe)
+    upload_result(new_pf['pf_id'], sharpe)
+    # Log new sharpe to influx
+    client.write_points([{
+        "measurement": "sharpe",
+        "fields": {
+            "sharpe": sharpe
+        }
+    }])
 
 
 while True:
     work_once()
+    # Log new work to influx
+    client.write_points([{
+        "measurement": "portfolios",
+        "fields": {
+            "value": 1
+        }
+    }])

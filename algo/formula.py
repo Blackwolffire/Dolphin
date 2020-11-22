@@ -3,10 +3,10 @@ from math import sqrt
 
 from pandas import DataFrame
 
-from asset import Asset
-from database import Database
-from portfolio import Portfolio
-from quote import Quote
+from algo.asset import Asset
+from algo.database import Database
+from algo.portfolio import Portfolio
+from algo.quote import Quote
 
 
 def compute_volatility(df: DataFrame, annualized=True) -> float:

@@ -1,9 +1,8 @@
-import database
-import data
-from asset import Asset
+from algo import database, data
+from algo.asset import Asset
 import matplotlib.pyplot as plt
 
-db = database.Database('new.sqlite')
+db = database.Database('data.sqlite')
 
 
 def get_portfolio():
@@ -21,5 +20,3 @@ def get_df(asset: Asset, plot=False):
         plt.show()
     else:
         return df
-
-

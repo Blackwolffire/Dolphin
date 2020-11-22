@@ -1,10 +1,8 @@
-import datetime
-
 from pandas import DataFrame
 from sqlalchemy import create_engine, MetaData, Table, Column, Float, Date, Integer, String, ForeignKey, select
 
-from asset import Asset
-from quote import Quote
+from algo.asset import Asset
+from algo.quote import Quote
 
 
 class Database:

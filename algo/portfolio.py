@@ -1,21 +1,27 @@
 import json
 
-from asset import Asset
+from algo.asset import Asset
 
 
 class Portfolio:
+    @classmethod
+    def from_dict(cls, data: dict):
+        pass
+
     def __init__(self, data: dict, asset: Asset):
         self.label = data['label']
         self.currency = data['currency']['code']
         self.type = data['type']
         self.values = data['values']
         self.asset = asset
+        self.date = '2016-06-01'
+        self.id = None
 
     def add_asset(self, asset: Asset, quantity: int):
-        if '2016-06-01' not in self.values:
-            self.values['2016-06-01'] = []
+        if self.date not in self.values:
+            self.values[self.date] = []
 
-        self.values['2013-06-14'].append({
+        self.values[self.date].append({
             'asset': {'asset': asset.id, 'quantity': quantity}
         })
 
@@ -26,3 +32,6 @@ class Portfolio:
             'type': self.type,
             'values': self.values
         })
+
+    def get_assets(self):
+        return self.values[self.date]

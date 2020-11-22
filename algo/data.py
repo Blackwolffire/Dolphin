@@ -3,10 +3,10 @@ from os import getenv
 
 import requests
 
-from asset import Asset
-from portfolio import Portfolio
-from quote import Quote
-from ratio import Ratio
+from algo.asset import Asset
+from algo.portfolio import Portfolio
+from algo.quote import Quote
+from algo.ratio import Ratio
 
 URL = 'https://dolphin.jump-technology.com:8443/api/v1'
 # Get credentials
