@@ -1,5 +1,6 @@
 import heapq
 
+from algo.data import START_DATE
 from algo.database import Database
 from algo.portfolio import Portfolio
 
@@ -27,6 +28,12 @@ def generate_portfolio():
     sorted_assets = correl_assets
     heapq._heapify_max(sorted_assets)
     # print(list_correlation)
+
+    portfolio = Portfolio(asset=db.get_assets(assets=[1831])[0])
+    for a in best_stocks:
+        portfolio.add_asset(a, a.to_quantity(10000, START_DATE, db))
+    yield portfolio
+
     print(f'correl asset list size: {len(sorted_assets)}')
     for j in range(15):
         popi = heapq._heappop_max(sorted_assets)
@@ -35,4 +42,7 @@ def generate_portfolio():
         print('correlation :')
         for poco in [(x[1], x[2].label) for x in list_correlation if x[0] == popi.id]:
             print(f'{poco[0]} with {poco[1]}')
-        yield best_stocks  # TODO: yield a Portfolio
+        portfolio = Portfolio()
+        for a in best_stocks:
+            portfolio.add_asset(a, a.to_quantity(10000, START_DATE, db))
+        yield portfolio
