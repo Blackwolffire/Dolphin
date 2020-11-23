@@ -30,3 +30,6 @@ class Asset:
 
     def __str__(self):
         return f'{self.label} | {self.type} | {self.id} | {self.currency}'
+
+    def __lt__(self, other):
+        return self.sharpe < other.sharpe
