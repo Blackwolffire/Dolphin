@@ -2,6 +2,7 @@ import json
 from os import getenv
 
 import requests
+from pandas import DataFrame
 
 from algo.asset import Asset
 from algo.portfolio import Portfolio
@@ -14,7 +15,7 @@ USERNAME = getenv('DOLPHIN_USERNAME', None)
 PASSWORD = getenv('DOLPHIN_PASSWORD', None)
 
 START_DATE = '2016-06-01'
-END_DATE = '2020-10-23'
+END_DATE = '2020-09-30'
 
 AUTH = (USERNAME, PASSWORD)
 
@@ -38,9 +39,24 @@ def get_sharpe_ratio():
     return get_ratios()[6]
 
 
+def get_pf_sharpe(asset: Asset):
+    rs = get_sharpe_ratio()
+    sharpe = calculate_ratio([asset], [rs], START_DATE, END_DATE)
+    return sharpe
+
+
 def get_portfolio(asset: Asset) -> Portfolio:
     res = requests.get(URL + f'/portfolio/{asset.id}/dyn_amount_compo', auth=AUTH)
     return Portfolio(res.json(), asset)
+
+
+def get_portfolio_quotes(asset: Asset):
+    quotes = get_quote(START_DATE, END_DATE, asset)
+    l = [x.__dict__ for x in quotes]
+    df = DataFrame(l)
+    df = df.set_index('date')
+    df['return_value'] = df['return']
+    return df
 
 
 def update_portfolio(portfolio: Portfolio) -> bool:

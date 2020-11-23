@@ -3,6 +3,7 @@ from typing import Union
 from pandas import DataFrame
 from sqlalchemy import create_engine, MetaData, Table, Column, Float, Date, Integer, String, ForeignKey, select
 
+from algo import data
 from algo.asset import Asset
 from algo.quote import Quote
 
@@ -141,6 +142,19 @@ class Database:
             return_value=quote.return_value)
         self.db_engine.execute(cmd)
 
+    def add_custom_quote(self, quote, date):
+        cmd = self.quote_table.insert().values(
+            asset_id=int(quote.asset),
+            date=date,
+            close=quote.close,
+            nav=quote.nav,
+            pl=quote.pl,
+            gross=quote.gross,
+            real_close_price=quote.real_close_price,
+            feed_source=quote.feed_source,
+            return_value=quote['return'])
+        self.db_engine.execute(cmd)
+
     def get_assets(self, data_frame=False, type:Union[str, list] = None, assets: list =None):
         cmd = self.asset_table.select().order_by(self.asset_table.c.sharpe.desc())
         if type:
@@ -179,12 +193,9 @@ class Database:
         asset = res.fetchall()
         return Asset(data=asset[0])
 
-    def get_quotes(self, assets: [Asset], start_date: str, end_date: str, data_frame=False):
-        asset_ids = [x.id for x in assets]
-        columns = [self.quote_table.c.asset_id]
-        for column in self.quote_table.columns:
-            if column.name != 'asset_id':
-                columns.append(column)
+    def get_quotes(self, assets: list, start_date: str, end_date: str, data_frame=False):
+        asset_ids = assets if isinstance(assets[0], int) else [x.id for x in assets]
+        columns = [x for x in self.quote_table.columns]
         if data_frame:
             columns.append(self.asset_table.c.currency)
         cmd = select(columns).where(self.quote_table.c.asset_id.in_(asset_ids))
@@ -208,3 +219,29 @@ class Database:
             df = df.sort_index()
             return df
         return quotes
+
+    def fill_empty_days(self):
+        assets = self.get_assets()
+        ref_asset = self.get_portfolio_asset()
+        df = self.get_quotes([ref_asset], data.START_DATE, data.END_DATE, data_frame=True)  # This is the reference for the days
+        missing = 0
+        # Insert for the first date
+        # for asset in assets:
+        #     asset_df = self.get_quotes([asset], data.START_DATE, data.END_DATE, data_frame=True)
+        #     if asset_df.index[0] != df.index[0]:
+        #         print(f'First price is {asset_df.iloc[0].close} for asset {asset_df.iloc[0].asset}')
+        #         good_asset = asset_df.iloc[0]
+        #         self.add_custom_quote(good_asset, date=df.index[0])
+        #         missing += 1
+
+        for asset in assets:
+            asset_df = self.get_quotes([asset], data.START_DATE, data.END_DATE, data_frame=True)
+            for date in df.index:
+                if date not in asset_df.index:
+                    print(asset)
+                    quotes = self.get_quotes([asset], data.START_DATE, date, data_frame=True)
+                    good_asset = quotes.iloc[-1]
+                    self.add_custom_quote(good_asset, date=date)
+                    missing += 1
+
+        print(f'Missing {missing} assets')
