@@ -226,13 +226,13 @@ class Database:
         df = self.get_quotes([ref_asset], data.START_DATE, data.END_DATE, data_frame=True)  # This is the reference for the days
         missing = 0
         # Insert for the first date
-        # for asset in assets:
-        #     asset_df = self.get_quotes([asset], data.START_DATE, data.END_DATE, data_frame=True)
-        #     if asset_df.index[0] != df.index[0]:
-        #         print(f'First price is {asset_df.iloc[0].close} for asset {asset_df.iloc[0].asset}')
-        #         good_asset = asset_df.iloc[0]
-        #         self.add_custom_quote(good_asset, date=df.index[0])
-        #         missing += 1
+        for asset in assets:
+            asset_df = self.get_quotes([asset], data.START_DATE, data.END_DATE, data_frame=True)
+            if asset_df.index[0] != df.index[0]:
+                print(f'First price is {asset_df.iloc[0].close} for asset {asset_df.iloc[0].asset}')
+                good_asset = asset_df.iloc[0]
+                self.add_custom_quote(good_asset, date=df.index[0])
+                missing += 1
 
         for asset in assets:
             asset_df = self.get_quotes([asset], data.START_DATE, data.END_DATE, data_frame=True)
