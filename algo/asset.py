@@ -27,6 +27,13 @@ class Asset:
         elif isinstance(data, int):
             self.id = data
 
+    def to_quantity(self, nav, date: str, db):
+        quotes = db.get_quotes([self], date, date)
+        if self.currency != 'EUR':
+            val = quotes[0].close * db.get_rate('EUR', self.currency, date)
+        else:
+            val = quotes[0].close
+        return int(nav / val)
 
     def __str__(self):
         return f'{self.label} | {self.type} | {self.id} | {self.currency}'
