@@ -81,16 +81,16 @@ class Database:
         corr = res.fetchall()
         return corr[0][2]
 
-    def get_correlated(self, asset: Union[Asset, int], inverse=True):
+    def get_correlated(self, asset: Union[Asset, int], inverse=True, threshold=0.0):
         asset_id = asset if isinstance(asset, int) else asset.id
         cmd = self.correlation_matrix_table.select().where(
             (self.correlation_matrix_table.c.asset_left == asset_id) |
             (self.correlation_matrix_table.c.asset_right == asset_id)
         ).order_by(self.correlation_matrix_table.c.correlation)
         if inverse:
-            cmd = cmd.where(self.correlation_matrix_table.c.correlation < 0)
+            cmd = cmd.where(self.correlation_matrix_table.c.correlation < threshold)
         else:
-            cmd = cmd.where(self.correlation_matrix_table.c.correlation >= 0)
+            cmd = cmd.where(self.correlation_matrix_table.c.correlation >= threshold)
 
         res = self.db_engine.execute(cmd)
         # return res.fetchall()
