@@ -75,8 +75,13 @@ class Database:
         a1 = asset1 if isinstance(asset1, int) else asset1.id
         a2 = asset2 if isinstance(asset2, int) else asset2.id
         cmd = self.correlation_matrix_table.select(self.correlation_matrix_table.c.correlation).where(
-            (self.correlation_matrix_table.c.asset_left == a1) &
-            (self.correlation_matrix_table.c.asset_right == a2)
+            ((self.correlation_matrix_table.c.asset_left == a1) &
+            (self.correlation_matrix_table.c.asset_right == a2) )
+            |
+            (
+                    (self.correlation_matrix_table.c.asset_right == a1) &
+                    (self.correlation_matrix_table.c.asset_left == a2)
+            )
         )
         res = self.db_engine.execute(cmd)
         corr = res.fetchall()
@@ -91,7 +96,7 @@ class Database:
         if inverse:
             cmd = cmd.where(self.correlation_matrix_table.c.correlation < threshold)
         else:
-            cmd = cmd.where(self.correlation_matrix_table.c.correlation >= threshold)
+            cmd = cmd.where(self.correlation_matrix_table.c.correlation >= -threshold)
 
         res = self.db_engine.execute(cmd)
         # return res.fetchall()

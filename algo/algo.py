@@ -1,5 +1,8 @@
 import heapq
 
+from pandas import DataFrame
+
+from algo import data
 from algo.data import START_DATE
 from algo.database import Database
 from algo.portfolio import Portfolio
@@ -46,3 +49,26 @@ def generate_portfolio():
         for a in best_stocks:
             portfolio.add_asset(a, a.to_quantity(10000, START_DATE, db))
         yield portfolio
+
+
+def generate_portfolio_1(size: int):
+    stocks = db.get_assets(type='STOCK', data_frame=True)  # Select stocks, ordered by sharpe
+    non_stocks = db.get_assets(type=['FUND', 'INDEX', 'PORTFOLIO', 'ETF_FUND'], data_frame=True)
+    best_stocks = stocks.head(size)  # Select the size best stocks
+
+    weights = [0.01 for _ in range(size)]
+
+def build_portfolio(assets: list) -> Portfolio:
+    # assets = [(4354, 0.005), ...]
+    amount = 1000000000
+    pf = Portfolio()
+
+    for a in assets:
+        asset = db.get_assets(assets=[a[0]], data_frame=True)
+        price = asset.close.iloc[0]
+        currency = asset.currency.iloc[0]
+        if currency != 'EUR':
+            price = price * db.get_rate('EUR', currency, data.START_DATE)
+        pf.add_asset(a[0], int((amount * a[1]) / price))
+
+    return pf

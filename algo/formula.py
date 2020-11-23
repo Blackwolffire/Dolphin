@@ -83,8 +83,7 @@ def compute_portfolio_sharpe_ratio(portfolio: Portfolio, start_date: str, end_da
     df = DataFrame(pf_data)
     df = df.rename(columns={0: 'date', 1: 'close', 2: 'return'})
     df = df.set_index('date')
-    # return compute_sharp_ratio(df)
-    return df
+    return compute_sharp_ratio(df)
 
 
 def compute_correlation(asset1: Asset, asset2: Asset, start_date: str, end_date: str, db: Database):
