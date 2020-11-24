@@ -72,7 +72,8 @@ class Database:
         self.db_engine.execute(cmd)
 
     def add_correlation(self, asset1: Asset, asset2: Asset, correlation: float):
-        cmd = self.correlation_matrix_table.insert().values(asset_left=asset1.id, asset_right=asset2.id, correlation=correlation)
+        cmd = self.correlation_matrix_table.insert().values(asset_left=asset1.id, asset_right=asset2.id,
+                                                            correlation=correlation)
         self.db_engine.execute(cmd)
 
     def get_correlation(self, asset1: Union[Asset, int], asset2: Union[Asset, int]) -> float:
@@ -80,7 +81,7 @@ class Database:
         a2 = asset2 if isinstance(asset2, int) else asset2.id
         cmd = self.correlation_matrix_table.select(self.correlation_matrix_table.c.correlation).where(
             ((self.correlation_matrix_table.c.asset_left == a1) &
-            (self.correlation_matrix_table.c.asset_right == a2) )
+             (self.correlation_matrix_table.c.asset_right == a2))
             |
             (
                     (self.correlation_matrix_table.c.asset_right == a1) &
@@ -164,14 +165,15 @@ class Database:
             return_value=quote['return'])
         self.db_engine.execute(cmd)
 
-    def get_assets(self, data_frame=False, type:Union[str, list] = None, assets: list =None):
-        cmd = self.asset_table.select().order_by(self.asset_table.c.sharpe.desc())
+    def get_assets(self, data_frame=False, type: Union[str, list] = None, assets: list = None, threshold=-10.0):
+        cmd = self.asset_table.select().order_by(self.asset_table.c.sharpe.desc()).where(self.asset_table.c.sharpe
+                                                                                         > threshold)
         if type:
             cmd = cmd.where(self.asset_table.c.type.in_(type if isinstance(type, list) else [type]))
         if assets:
             cmd = cmd.where(self.asset_table.c.id.in_(assets))
 
-        #print(cmd)
+        # print(cmd)
         res = self.db_engine.execute(cmd)
         assets = []
         for asset in res.fetchall():
@@ -182,7 +184,9 @@ class Database:
             assets.append(a)
         if data_frame:
             df = DataFrame(assets)
-            df = df.rename(columns={0: 'id', 1: 'label', 2: 'type', 3: 'currency', 4: 'sharpe', 5: 'custom_sharpe', 6: 'return', 7: 'ann_return', 8: 'close'})
+            df = df.rename(
+                columns={0: 'id', 1: 'label', 2: 'type', 3: 'currency', 4: 'sharpe', 5: 'custom_sharpe', 6: 'return',
+                         7: 'ann_return', 8: 'close'})
             df = df.set_index('id')
             return df
 
@@ -232,7 +236,8 @@ class Database:
     def fill_empty_days(self):
         assets = self.get_assets()
         ref_asset = self.get_portfolio_asset()
-        df = self.get_quotes([ref_asset], data.START_DATE, data.END_DATE, data_frame=True)  # This is the reference for the days
+        df = self.get_quotes([ref_asset], data.START_DATE, data.END_DATE,
+                             data_frame=True)  # This is the reference for the days
         missing = 0
         # Insert for the first date
         for asset in assets:
