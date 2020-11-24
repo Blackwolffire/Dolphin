@@ -58,5 +58,6 @@ spec:
     app: chronograf
   ports:
     - port: 8888
+      protocol: TCP
       targetPort: 8888
       nodePort: 30001
