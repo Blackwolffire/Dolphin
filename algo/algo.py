@@ -145,9 +145,12 @@ def generate_portfolio_3(size: int):
         for i in range(1, weights):
             if weights[i] < 0.1 and (weights[i] > weights[maxi] or weights[maxi] > 0.1):
                 maxi = i
-        #if gap > 0.1:
-         #   gap -= weights[i]
-          #  weights
+        if gap > 0.1 - weights[maxi]:
+            gap -= 0.1 - weights[maxi]
+            weights[maxi] = 0.1
+        else:
+            weights[maxi] += gap
+            gap = 0.0
 
     aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
 
