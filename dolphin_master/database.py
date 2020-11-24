@@ -11,6 +11,8 @@ class Database:
     def __init__(self):
         username = os.getenv('PSQL_USERNAME')
         password = os.getenv('PSQL_PASSWORD')
+        host = os.getenv('PSQL_HOST')
+        port = os.getenv('PSQL_PORT')
         # engine_url = f'postgresql://{username}:{password}@posgtres:5432/portfolios'
         engine_url = f'sqlite:///test.sqlite'
         self.db_engine = create_engine(engine_url)
@@ -50,14 +52,21 @@ class Database:
 
         return id
 
-    def get_portfolio(self, pf_id: int):
+    def get_portfolio(self, pf_id: int, assets=True):
         pf = Portfolio()
         pf.id = pf_id
         cmd = self.asset_table.select().where(self.asset_table.c.portfolio_id == pf_id)
         res = self.db_engine.execute(cmd)
-        for asset in res.fetchall():
-            pf.add_asset(asset[1], asset[2])
+        if assets:
+            for asset in res.fetchall():
+                pf.add_asset(asset[1], asset[2])
         return pf
+
+    def get_portfolio_start_time(self, pf_id):
+        cmd = self.portfolio_table.select().where(self.portfolio_table.c.id == pf_id)
+        res = self.db_engine.execute(cmd)
+        pf = res.fetchall()
+        return pf[0][1]
 
     def store_asset(self, pf_id: int, asset_id: int, quantity: float):
         cmd = self.asset_table.insert().values(portfolio_id=pf_id, asset_id=asset_id, quantity=quantity)
@@ -67,6 +76,7 @@ class Database:
         finished = time.time()
         cmd = self.portfolio_table.update().where(self.portfolio_table.c.id == pf_id).values(finished=finished, sharpe=sharpe, custom_sharpe=custom_sharpe)
         self.db_engine.execute(cmd)
+        return finished - self.get_portfolio_start_time(pf_id)
 
     def get_best_portfolios(self):
         best_sharpe = Query(func.max(self.portfolio_table.c.sharpe))

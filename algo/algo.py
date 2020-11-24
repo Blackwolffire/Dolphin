@@ -1,5 +1,7 @@
 import heapq
+import json
 
+import requests
 from pandas import DataFrame
 
 from algo import data
@@ -58,9 +60,10 @@ def generate_portfolio_1(size: int):
 
     weights = [0.01 for _ in range(size)]
 
+
 def build_portfolio(assets: list) -> Portfolio:
     # assets = [(4354, 0.005), ...]
-    amount = 1000000000
+    amount = 50000
     pf = Portfolio()
 
     for a in assets:
@@ -72,3 +75,9 @@ def build_portfolio(assets: list) -> Portfolio:
         pf.add_asset(a[0], int((amount * a[1]) / price))
 
     return pf
+
+
+def submit_portfolio(pf: Portfolio):
+    payload = json.dumps({'assets': pf.get_assets()})
+    res = requests.post('https://api.finance.debuisne.fr/new_pf', data=payload)
+    return res.status_code

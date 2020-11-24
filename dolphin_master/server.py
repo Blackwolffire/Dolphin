@@ -1,48 +1,33 @@
-from threading import Thread
-from typing import List
+import sys
 import uvicorn
-from fastapi import FastAPI, WebSocket, Request
-import time
+from fastapi import FastAPI, Request
 import os
-
+from starlette.middleware.cors import CORSMiddleware
 from influxdb import InfluxDBClient
-from starlette.websockets import WebSocketDisconnect
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import json
 
 from algo.portfolio import Portfolio
 from dolphin_master.database import Database
 
+
 db = Database()
 new_pfs = set()
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-client = InfluxDBClient('localhost',
+influxdb_host = os.getenv('INFLUX_HOST', 'localhost')
+client = InfluxDBClient(influxdb_host,
                         8086,
                         os.environ.get("INFLUXDB_USER", "worker"),
                         os.environ.get("INFLUXDB_USER_PASSWORD", "worker"),
                         os.environ.get("INFLUXDB_DB", "worker"))
-
-
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    def send(self, message: dict, websocket: WebSocket):
-        websocket.send_json(message)
-
-    async def broadcast(self, message: dict):
-        for connection in self.active_connections:
-            await connection.send_json(message)
-
-
-manager = ConnectionManager()
-
 
 def get_best_portfolios():
     return db.get_best_portfolios()
@@ -54,10 +39,10 @@ def get_metrics():
 
 def get_info() -> dict:
     metrics = get_metrics()
-    best_pf = get_best_portfolios()[0]
+    best_pf = get_best_portfolios()[0] if len(get_best_portfolios()) > 0 else [0, 0, 0, 0]
     info = {
         'best_sharpe': best_pf[3],
-        'best_portfolio': db.get_portfolio(best_pf[0]).get_assets(),
+        'best_portfolio': db.get_portfolio(best_pf[0]).get_assets() if best_pf[0] != 0 else [[0,0]],
         'current_rate': metrics.get('current_rate', 0),
         'total_calculated': metrics.get('total', 0),
         'mean': metrics.get('mean', 0),
@@ -66,15 +51,9 @@ def get_info() -> dict:
     return info
 
 
-@app.websocket('/info/{ts}')
-async def return_info(websocket: WebSocket, ts: float):
-    await manager.connect(websocket)
-    try:
-        while True:
-            await manager.broadcast(get_info())
-            time.sleep(5)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
+@app.get('/info')
+async def return_info():
+    return json.dumps(get_info())
 
 
 @app.get('/new_pf')
@@ -99,36 +78,28 @@ async def store_new_sharpe(pf_id: int, request: Request):
     data = await request.json()
     sharpe = data['sharpe'] if 'sharpe' in data else 0
     pf = db.get_portfolio(pf_id)
-    db.update_portfolio(pf_id, sharpe, sharpe)
+    compute_time = db.update_portfolio(pf_id, sharpe, sharpe)
     # Log new dispatch to influxdb
     client.write_points([{
         "measurement": "sharpe",
         "fields": {
             "custom_sharpe": sharpe,
-            "jump_sharpe": sharpe
+            "jump_sharpe": sharpe,
+            "compute_time": compute_time
         }
     }])
     return 'OK'
 
 
-def portfolio_thread():
-    global new_pfs
-    # for pf in generate_portfolios():
-    #     new_pfs.add(pf)
-    while True:
-        pf = Portfolio()
-        pf.add_asset(1, 1)
-        pf.add_asset(2, 2)
-        pf.add_asset(3, 3)
-        new_pfs.add(pf)
-        time.sleep(5)
-
-
-def main():
-    thread = Thread(target=portfolio_thread)
-    thread.start()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
+@app.post('/new_pf')
+async def receive_new_portfolio(request: Request):
+    data = await request.json()
+    pf = Portfolio()
+    # TODO: check if exists
+    for asset in data['assets']:
+        pf.add_asset(asset[0], asset[1])
+    new_pfs.add(pf)
+    return 'OK'
 
 if __name__ == '__main__':
-    main()
+    uvicorn.run(app, host="0.0.0.0", port=8000)
