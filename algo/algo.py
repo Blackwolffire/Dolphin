@@ -125,24 +125,20 @@ def generate_portfolio_2(size: int):
 
 ######## SOS CODE DUPLICATED #########
 
-def generate_portfolio_3(size: int):
-    stocks = db.get_assets(type='STOCK', threshold=0.0)  # Select stocks, ordered by sharpe
-    non_stocks = db.get_assets(type=['FUND', 'INDEX', 'PORTFOLIO', 'ETF_FUND'], data_frame=True, threshold=0.0)
-    best_stocks = stocks[0:size]
 
-    sharpes = [a.sharpe for a in best_stocks]
+def compute_weights(sharpes):
     sharpe_sum = sum(sharpes)
-    weights = [s/sharpe_sum for s in sharpes]
+    weights = [s / sharpe_sum for s in sharpes]
     gap = 0.0
-    for i in range(weights):
+    for i in range(len(weights)):
         if weights[i] > 0.1:
-            gap += weights - 0.1
+            gap += weights[i] - 0.1
             weights[i] = 0.1
         if weights[i] < 0.01:
             weights[i] = 0.01
     while gap != 0:
         maxi = 0
-        for i in range(1, weights):
+        for i in range(1, len(weights)):
             if weights[i] < 0.1 and (weights[i] > weights[maxi] or weights[maxi] > 0.1):
                 maxi = i
         if gap > 0.1 - weights[maxi]:
@@ -151,7 +147,16 @@ def generate_portfolio_3(size: int):
         else:
             weights[maxi] += gap
             gap = 0.0
+    return weights
 
+
+def generate_portfolio_3(size: int):
+    stocks = db.get_assets(type='STOCK', threshold=0.0)  # Select stocks, ordered by sharpe
+    non_stocks = db.get_assets(type=['FUND', 'INDEX', 'PORTFOLIO', 'ETF_FUND'], data_frame=True, threshold=0.0)
+    best_stocks = stocks[0:size]
+
+    sharpes = [a.sharpe for a in best_stocks]
+    weights = compute_weights(sharpes)
     aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
 
     correl_assets = []
@@ -177,8 +182,7 @@ def generate_portfolio_3(size: int):
         asset = heapq._heappop_max(sorted_assets)
         best_stocks.append(asset)
         sharpes.append(asset.sharpe)
-        sharpe_sum = sum(sharpes)
-        weights = [s/sharpe_sum for s in sharpes]
+        weights = compute_weights(sharpes)
         print(f'weights : {weights}')
         aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
         submit_portfolio(build_portfolio(aw))
