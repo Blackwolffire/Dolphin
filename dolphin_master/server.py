@@ -1,4 +1,7 @@
 import sys
+import time
+from threading import Thread
+
 import uvicorn
 from fastapi import FastAPI, Request
 import os
@@ -9,9 +12,12 @@ import json
 
 from algo.portfolio import Portfolio
 from dolphin_master.database import Database
+import algo.data as data
+from algo.database import Database as MarketDatabase
 
 
 db = Database()
+market_db = MarketDatabase('../data.sqlite')
 new_pfs = set()
 app = FastAPI()
 app.add_middleware(
@@ -29,9 +35,6 @@ client = InfluxDBClient(influxdb_host,
                         os.environ.get("INFLUXDB_USER_PASSWORD", "worker"),
                         os.environ.get("INFLUXDB_DB", "worker"))
 
-def get_best_portfolios():
-    return db.get_best_portfolios()
-
 
 def get_metrics():
     return {}
@@ -39,12 +42,19 @@ def get_metrics():
 
 def get_info() -> dict:
     metrics = get_metrics()
-    best_pf = get_best_portfolios()[0] if len(get_best_portfolios()) > 0 else [0, 0, 0, 0]
+    count = client.query('select count(*) from "worker"."autogen"."sharpe";')
+    try:
+        total_calculated = [x for x in count][0][0]['count_custom_sharpe']
+    except Exception as e:
+        print(e)
+        total_calculated = 0
+    print(total_calculated)
+    best_pf = db.get_best_portfolio() if db.get_best_portfolio() else [0, 0, 0, 0]
     info = {
-        'best_sharpe': best_pf[3],
+        'best_sharpe': str(best_pf[3]),
         'best_portfolio': db.get_portfolio(best_pf[0]).get_assets() if best_pf[0] != 0 else [[0,0]],
         'current_rate': metrics.get('current_rate', 0),
-        'total_calculated': metrics.get('total', 0),
+        'total_calculated': str(total_calculated),
         'mean': metrics.get('mean', 0),
         'queue': len(new_pfs)
     }
@@ -77,14 +87,12 @@ def dispatch_portfolio():
 async def store_new_sharpe(pf_id: int, request: Request):
     data = await request.json()
     sharpe = data['sharpe'] if 'sharpe' in data else 0
-    pf = db.get_portfolio(pf_id)
-    compute_time = db.update_portfolio(pf_id, sharpe, sharpe)
+    compute_time = db.update_portfolio(pf_id, sharpe)
     # Log new dispatch to influxdb
     client.write_points([{
         "measurement": "sharpe",
         "fields": {
             "custom_sharpe": sharpe,
-            "jump_sharpe": sharpe,
             "compute_time": compute_time
         }
     }])
@@ -101,5 +109,36 @@ async def receive_new_portfolio(request: Request):
     new_pfs.add(pf)
     return 'OK'
 
+
+def jump_check_thread():
+    while True:
+        # Get best portfolios
+        pfs = db.get_best_custom_portfolios(15)
+        pf_asset = market_db.get_portfolio_asset()
+        for pf in pfs:
+            portfolio = db.get_portfolio(pf[0])
+            portfolio.asset = pf_asset
+            data.update_portfolio(portfolio)
+            data.update_portfolio(portfolio) # Update twice for jump
+            sharpe = data.get_pf_sharpe(portfolio.asset)
+            db.add_jump_sharpe(pf[0], sharpe)
+            client.write_points([{
+                "measurement": "sharpe",
+                "fields": {
+                    "jump_sharpe": sharpe,
+                }
+            }])
+        # Fetch the best portfolio and send it to JUMP
+        best_pf = db.get_best_portfolio()
+        best_portfolio = db.get_portfolio(best_pf[0])
+        best_portfolio.asset = pf_asset
+        data.update_portfolio(best_portfolio)
+        data.update_portfolio(best_portfolio)
+        time.sleep(60)  # Every minute
+
+
 if __name__ == '__main__':
+    thread = Thread(target=jump_check_thread)
+    thread.start()
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    thread.join()

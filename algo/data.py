@@ -2,7 +2,10 @@ import json
 from os import getenv
 
 import requests
-from pandas import DataFrame
+try:
+    from pandas import DataFrame
+except Exception as e:
+    print(f'No pandas: {e}')
 
 from algo.asset import Asset
 from algo.portfolio import Portfolio
@@ -42,7 +45,7 @@ def get_sharpe_ratio():
 def get_pf_sharpe(asset: Asset):
     rs = get_sharpe_ratio()
     sharpe = calculate_ratio([asset], [rs], START_DATE, END_DATE)
-    return sharpe
+    return sharpe[str(asset.id)][str(rs.id)]
 
 
 def get_portfolio(asset: Asset) -> Portfolio:

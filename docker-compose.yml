@@ -1,0 +1,40 @@
+version: '3'
+services:
+  #postgres:
+  #  image: postgres
+  #  environment:
+  #      POSTGRES_USER: user
+  #      POSTGRES_PASSWORD: pass
+  #      POSTGRES_DB: portfolios
+  #  restart: unless-stopped
+  #  volumes:
+  #    - ./postgres-data:/var/lib/postgresql/data
+  #  ports:
+  #    - "5432:5432"
+
+  influxdb:
+    image: influxdb:alpine
+    environment:
+      - INFLUXDB_DB=worker
+      - INFLUXDB_READ_USER=worker
+      - INFLUXDB_READ_USER_PASSWORD="PASS"
+      - INFLUXDB_WRITE_USER=worker
+      - INFLUXDB_WRITE_USER_PASSWORD="PASS"
+    ports:
+      - "8086:8086"
+
+  chronograf:
+    image: chronograf:alpine
+    volumes:
+      - ./chronograf:/var/lib/chronograf
+    ports:
+      - "8888:8888"
+
+  master:
+    image: dolphin_master
+    ports:
+      - "8000:8000"
+    environment:
+      - INFLUX_HOST=influxdb
+      - DOLPHIN_USERNAME=
+      - DOLPHIN_PASSWORD=

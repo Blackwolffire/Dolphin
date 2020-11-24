@@ -1,6 +1,10 @@
 from typing import Union
 
-from pandas import DataFrame
+try:
+    from pandas import DataFrame
+except Exception as e:
+    print(f'No pandas: {e}')
+
 from sqlalchemy import create_engine, MetaData, Table, Column, Float, Date, Integer, String, ForeignKey, select
 
 from algo import data
