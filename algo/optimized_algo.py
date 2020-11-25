@@ -64,31 +64,33 @@ def generate_portfolio_1(size: int):
     submit_portfolio(build_portfolio(aw))
     for i in range(size, 40):
         aw.append((int(stocks.index[i]), 0.01))
+        # submit_portfolio(build_portfolio(aw))
         submit_portfolio(build_portfolio(aw))
 
 
 def build_portfolio(assets: list) -> Portfolio:
     # assets = [(4354, 0.005), ...]
-    amount = 1
+    amount = data.BUDGET
     pf = Portfolio()
 
+    total = 0
+    m = []
     for a in assets:
         asset = db.get_assets(assets=[a[0]], data_frame=True)
         price = asset.close.iloc[0]
         currency = asset.currency.iloc[0]
         if currency != 'EUR':
             price = price * db.get_rate('EUR', currency, data.START_DATE)
-        amount *= price
+        quantity = int((amount * a[1]) / price)
+        total += price * quantity
+        m.append((a[0], price * quantity))
+        pf.add_asset(a[0], quantity)
 
-    amount *= 100
-    print(amount)
-    for a in assets:
-        asset = db.get_assets(assets=[a[0]], data_frame=True)
-        price = asset.close.iloc[0]
-        currency = asset.currency.iloc[0]
-        if currency != 'EUR':
-            price = price * db.get_rate('EUR', currency, data.START_DATE)
-        pf.add_asset(a[0], int((amount * a[1]) / price))
+    for i in m:
+        pct = i[1] / total
+        if pct < 0.01 or pct > 0.1:
+            print(f'Asset {i[0]} has a percentage of {pct}%')
+
 
     return pf
 
@@ -96,7 +98,7 @@ def build_portfolio(assets: list) -> Portfolio:
 def submit_portfolio(pf: Portfolio):
     payload = json.dumps({'assets': pf.get_assets()})
     print(payload)
-    res = requests.post('http://192.168.1.11:8000/new_pf', data=payload)
+    res = requests.post('http://api.finance.debuisne.fr/new_pf', data=payload)
     sleep(0.05)
     return res.status_code
 
@@ -131,7 +133,9 @@ def generate_portfolio_2(size: int):
     for i in range(size, size + len(sorted_assets)):
         asset = heapq._heappop_max(sorted_assets)
         aw.append((int(asset.id), 0.1))
-        submit_portfolio(build_portfolio(aw))
+        # submit_portfolio(build_portfolio(aw))
+        build_portfolio(aw)
+
 
 ######## SOS CODE DUPLICATED #########
 
@@ -253,22 +257,21 @@ def generate_portfolio_6(size: int = 20):
     aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
     submit_portfolio(build_portfolio(aw))
 
-    # for i in range(size):
-    #     weights[i] = 0.1
-    #     for j in range(size):
-    #         if j != i:
-    #             weights[j] = 0.4/(size-1)
-    #     for j in range(size):
-    #         weights[j+size] = 0.1
-    #         for k in range(size, size * 2):
-    #             if k != j + size:
-    #                 weights[k] = 0.4/(size-1)
-    #
-    #         print(f'weights : {weights}')
-    #         aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
-    #         submit_portfolio(build_portfolio(aw))
+    for i in range(size):
+        weights[i] = 0.1
+        for j in range(size):
+            if j != i:
+                weights[j] = 0.4/(size-1)
+        for j in range(size):
+            weights[j+size] = 0.1
+            for k in range(size, size * 2):
+                if k != j + size:
+                    weights[k] = 0.4/(size-1)
 
-    counter = 0
+            print(f'weights : {weights}')
+            aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
+            submit_portfolio(build_portfolio(aw))
+"""
     for i in range(size):
         for ii in range(size):
             if i == ii:
@@ -290,13 +293,8 @@ def generate_portfolio_6(size: int = 20):
 
                     print(f'weights : {weights}')
                     aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
-                    if counter > 20000:
-                        submit_portfolio(build_portfolio(aw))
-                        counter += 1
-                    else:
-                        counter += 1
-
-
+                    submit_portfolio(build_portfolio(aw))
+    """
 
 
 def generate_portfolio_7(size: int = 20):

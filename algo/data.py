@@ -26,6 +26,7 @@ AUTH = (USERNAME, PASSWORD)
 
 def get_assets(date: str) -> [Asset]:
     res = requests.get(URL + f'/asset?columns=ASSET_DATABASE_ID&columns=LABEL&columns=LAST_CLOSE_VALUE_IN_CURR&columns=TYPE&date={date}', verify=False, auth=AUTH)
+    print(res.json())
     return [Asset(x, date) for x in res.json()]
 
 
@@ -66,6 +67,7 @@ def get_portfolio_quotes(asset: Asset):
 
 def update_portfolio(portfolio: Portfolio) -> bool:
     res = requests.put(URL + f'/portfolio/{portfolio.asset.id}/dyn_amount_compo', auth=AUTH, data=portfolio.json())
+    print(res.json())
     return res.status_code == 200
 
 
@@ -112,10 +114,13 @@ def check_portfolio(db):
     if snavs < BUDGET * 0.99:
         print(f'WARNING: total ({snavs}) too much inferior to {BUDGET}')
     weights = []
+    i = 0
+    valid = True
     for n in navs:
         w = n / snavs
         weights.append(w)
         if w > 0.1 or w < 0.01:
-            print(f"INVALID: weight = {w}")
-            return False
-    return True
+            print(f"INVALID: weight = {w} for asset {str(assets[i])}")
+            valid = False
+        i += 1
+    return valid
