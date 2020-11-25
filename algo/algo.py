@@ -67,19 +67,66 @@ def generate_portfolio_1(size: int):
         submit_portfolio(build_portfolio(aw))
 
 
-def build_portfolio(assets: list) -> Portfolio:
+def build_portfolio(aw: list) -> Portfolio:
     # assets = [(4354, 0.005), ...]
     amount = data.BUDGET
     pf = Portfolio()
-
-    for a in assets:
+"""
+    min = amount
+    gap = 0.0
+    gapw = 0.0
+    for (a, i) in zip(aw, range(len(aw))):
         asset = db.get_assets(assets=[a[0]], data_frame=True)
         price = asset.close.iloc[0]
         currency = asset.currency.iloc[0]
         if currency != 'EUR':
             price = price * db.get_rate('EUR', currency, data.START_DATE)
-        pf.add_asset(a[0], int((amount * a[1]) / price))
+        if price < min:
+            min = price
+        quantity = int((amount * a[1]) / price)
+        gap += (amount * a[1]) - quantity * price
+        gapw += a[1] - quantity * price / amount
+        aw[i] = (a[0], quantity * price / amount)
 
+    dead = []
+    while gap > min and len(dead) != len(aw):
+
+        while gapw > 0.01:
+            maxi = 0
+            for i in range(1, len(aw)):
+                if aw[i][1] < 0.1 and (aw[i][1] > aw[maxi][1] or aw[maxi][1] >= 0.1):
+                    if aw[i][0] not in dead:
+                        maxi = i
+            if gapw > 0.1 - aw[maxi][1]:
+                gapw -= 0.1 - aw[maxi][1]
+                aw[maxi] = (aw[maxi][0], 0.1)
+            else:
+                aw[maxi] = (aw[maxi][0], aw[maxi][1] + gapw)
+                gapw = 0.0
+        isdead = False
+        gap = 0.0
+        for a in aw:
+            asset = db.get_assets(assets=[a[0]], data_frame=True)
+            price = asset.close.iloc[0]
+            currency = asset.currency.iloc[0]
+            if currency != 'EUR':
+                price = price * db.get_rate('EUR', currency, data.START_DATE)
+            quantity = int((amount * a[1]) / price)
+            gap += (amount * a[1]) - quantity * price
+            gapw += a[1] - quantity * price / amount
+            if not isdead and a[1] - quantity * price / amount > 0.0 and a[0] not in dead:
+                dead.append(a[0])
+                isdead = True
+            aw[i] = (a[0], quantity * price / amount)
+"""
+    for (a, i) in zip(aw, range(len(aw))):
+        asset = db.get_assets(assets=[a[0]], data_frame=True)
+        price = asset.close.iloc[0]
+        currency = asset.currency.iloc[0]
+        if currency != 'EUR':
+            price = price * db.get_rate('EUR', currency, data.START_DATE)
+        quantity = int((amount * a[1]) / price)
+        pf.add_asset(a[0], quantity)
     return pf
 
 
