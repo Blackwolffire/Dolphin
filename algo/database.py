@@ -32,7 +32,8 @@ class Database:
                                  Column('sharpe_custom', Float),
                                  Column('return_', Float),
                                  Column('ann_return', Float),
-                                 Column('close', Float)
+                                 Column('close', Float),
+                                 Column('decimal', Float)
                                  )
 
         self.quote_table = Table('quote', metadata,
@@ -259,3 +260,7 @@ class Database:
                     missing += 1
 
         print(f'Missing {missing} assets')
+
+    def update_decimal(self, asset_id, decimal):
+        cmd = self.asset_table.update().where(self.asset_table.c.id == asset_id).values(decimal=decimal)
+        self.db_engine.execute(cmd)

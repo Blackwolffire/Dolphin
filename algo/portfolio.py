@@ -15,7 +15,7 @@ class Portfolio:
         self.date = list(self.values.keys())[0] if len(list(self.values.keys())) > 0 else '2016-06-01'
         self.id = None
 
-    def add_asset(self, asset: Union[Asset, int], quantity: int):
+    def add_asset(self, asset: Union[Asset, int], quantity):
         if self.date not in self.values:
             self.values[self.date] = []
         asset_id = asset if isinstance(asset, int) else asset.id
