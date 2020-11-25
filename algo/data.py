@@ -19,6 +19,7 @@ PASSWORD = getenv('DOLPHIN_PASSWORD', None)
 
 START_DATE = '2016-06-01'
 END_DATE = '2020-09-30'
+BUDGET = 1000000000
 
 AUTH = (USERNAME, PASSWORD)
 
@@ -50,6 +51,7 @@ def get_pf_sharpe(asset: Asset):
 
 def get_portfolio(asset: Asset) -> Portfolio:
     res = requests.get(URL + f'/portfolio/{asset.id}/dyn_amount_compo', auth=AUTH)
+    print(res.json())
     return Portfolio(res.json(), asset)
 
 
@@ -94,3 +96,26 @@ def get_currency_rate(src: str, dst: str, date: str):
     return float(res.json()['rate']['value'].replace(',', '.'))
 
 
+def check_portfolio(db):
+    pf = get_portfolio(db.get_portfolio_asset())
+    assets = []
+    quantities = []
+    for (aid, q) in pf.get_assets():
+        assets.append(db.get_assets(assets=[aid])[0])
+        quantities.append(q)
+
+    navs = [a.to_nav(q, START_DATE, db) for (a, q) in zip(assets, quantities)]
+    snavs = sum(navs)
+    if snavs > BUDGET:
+        print(f'INVALID: total ({snavs}) superior to {BUDGET}')
+        return False
+    if snavs < BUDGET * 0.99:
+        print(f'WARNING: total ({snavs}) too much inferior to {BUDGET}')
+    weights = []
+    for n in navs:
+        w = n / snavs
+        weights.append(w)
+        if w > 0.1 or w < 0.01:
+            print(f"INVALID: weight = {w}")
+            return False
+    return True

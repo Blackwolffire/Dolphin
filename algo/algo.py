@@ -69,7 +69,7 @@ def generate_portfolio_1(size: int):
 
 def build_portfolio(assets: list) -> Portfolio:
     # assets = [(4354, 0.005), ...]
-    amount = 10000000
+    amount = data.BUDGET
     pf = Portfolio()
 
     for a in assets:
@@ -257,7 +257,7 @@ def generate_portfolio_6(size: int = 20):
             print(f'weights : {weights}')
             aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
             submit_portfolio(build_portfolio(aw))
-
+"""
     for i in range(size):
         for ii in range(size):
             if i == ii:
@@ -280,6 +280,7 @@ def generate_portfolio_6(size: int = 20):
                     print(f'weights : {weights}')
                     aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
                     submit_portfolio(build_portfolio(aw))
+    """
 
 
 def generate_portfolio_7(size: int = 20):
