@@ -62,14 +62,14 @@ def generate_portfolio_1(size: int):
     weights = [0.01 for _ in range(size)]
     aw = [(a, w) for a, w in zip(best_stocks.index, weights)]
     submit_portfolio(build_portfolio(aw))
-    for i in range(size, 100):
+    for i in range(size, 40):
         aw.append((int(stocks.index[i]), 0.01))
         submit_portfolio(build_portfolio(aw))
 
 
 def build_portfolio(assets: list) -> Portfolio:
     # assets = [(4354, 0.005), ...]
-    amount = 1000000
+    amount = 10000000
     pf = Portfolio()
 
     for a in assets:
@@ -136,10 +136,10 @@ def compute_weights(sharpes):
             weights[i] = 0.1
         if weights[i] < 0.01:
             weights[i] = 0.01
-    while gap != 0:
+    while gap > 0.0:
         maxi = 0
         for i in range(1, len(weights)):
-            if weights[i] < 0.1 and (weights[i] > weights[maxi] or weights[maxi] > 0.1):
+            if weights[i] < 0.1 and (weights[i] > weights[maxi] or weights[maxi] >= 0.1):
                 maxi = i
         if gap > 0.1 - weights[maxi]:
             gap -= 0.1 - weights[maxi]
@@ -187,17 +187,190 @@ def generate_portfolio_3(size: int):
         aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
         submit_portfolio(build_portfolio(aw))
 
-    for (i, a) in zip(range(len(aw)), aw):
-        if i % 2:
-            a[1] *= 2
-        else:
-            a[1] = a[1] / 2
+
+def generate_portfolio_4(size: int):
+    stocks = db.get_assets(type='STOCK', threshold=0.0)  # Select stocks, ordered by sharpe
+    all_assets = db.get_assets(type=['STOCK', 'FUND', 'INDEX', 'PORTFOLIO', 'ETF_FUND'], threshold=0.0)
+    best_stocks = stocks[0:size]
+
+    sharpes = [a.sharpe for a in best_stocks]
+
+    for i in range(size, 40):
+        asset = all_assets.pop(0)
+        best_stocks.append(asset)
+        sharpes.append(asset.sharpe)
+        weights = compute_weights(sharpes)
+        print(f'weights : {weights}')
+        aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
+        submit_portfolio(build_portfolio(aw))
+
+
+def generate_portfolio_5(size: int):
+    decorrel = [1455, 1519, 1521, 1745, 2128, 2189, 2190, 2191]
+    dasset = db.get_assets(assets=decorrel)
+    stocks = db.get_assets(type='STOCK', threshold=0.0)  # Select stocks, ordered by sharpe
+    all_assets = db.get_assets(type=['STOCK', 'FUND', 'INDEX', 'PORTFOLIO', 'ETF_FUND'], threshold=0.0)
+    best_stocks = stocks[0:size]
+    best_stocks = best_stocks + dasset
+    sharpes = [a.sharpe for a in best_stocks]
+    weights = compute_weights(sharpes)
+    aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
     submit_portfolio(build_portfolio(aw))
 
-    """
-    for (i, a) in zip(range(len(aw)), aw):
-        if i % 2:
-            a[1] *= 2
-        else:
-            a[1] /= 2
-    """
+    for i in range(size, 40):
+        asset = all_assets.pop(0)
+        best_stocks.append(asset)
+        sharpes.append(asset.sharpe)
+        weights = compute_weights(sharpes)
+        print(f'weights : {weights}')
+        aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
+        submit_portfolio(build_portfolio(aw))
+
+
+def generate_portfolio_6(size: int = 20):
+    stocks = db.get_assets(type='STOCK', threshold=0.0)  # Select stocks, ordered by sharpe
+    all_assets = db.get_assets(type=['STOCK', 'FUND', 'INDEX', 'PORTFOLIO', 'ETF_FUND'], threshold=0.0)
+    best_stocks = stocks[0:size]
+    other_b_stocks = all_assets[0:size]
+
+    sharpes = [a.sharpe for a in best_stocks]
+    for ob in other_b_stocks:
+        sharpes.append(ob.sharpe)
+    weights = compute_weights(sharpes[0:int(size/2)])
+    weights += compute_weights(sharpes[int(size/2):])
+    for i in range(len(weights)):
+        weights[i] /= 2
+    aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
+    submit_portfolio(build_portfolio(aw))
+
+    for i in range(size):
+        weights[i] = 0.1
+        for j in range(size):
+            if j != i:
+                weights[j] = 0.4/(size-1)
+        for j in range(size):
+            weights[j+size] = 0.1
+            for k in range(size, size * 2):
+                if k != j + size:
+                    weights[k] = 0.4/(size-1)
+
+            print(f'weights : {weights}')
+            aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
+            submit_portfolio(build_portfolio(aw))
+
+    for i in range(size):
+        for ii in range(size):
+            if i == ii:
+                continue
+            weights[i] = 0.1
+            weights[ii] = 0.1
+            for j in range(size):
+                if j != i and j != ii:
+                    weights[j] = 0.3/(size-2)
+            for j in range(size):
+                for jj in range(size):
+                    if j == jj:
+                        continue
+                    weights[j+size] = 0.1
+                    weights[jj+size] = 0.1
+                    for k in range(size, size * 2):
+                        if k != j + size:
+                            weights[k] = 0.3/(size-2)
+
+                    print(f'weights : {weights}')
+                    aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
+                    submit_portfolio(build_portfolio(aw))
+
+
+def generate_portfolio_7(size: int = 20):
+    stocks = db.get_assets(type='STOCK', threshold=0.0)  # Select stocks, ordered by sharpe
+    best_stocks = stocks[0:size]
+    correl_assets = []
+    correl_asset_id = set()
+    list_correlation = []
+    # Get negatively correlated stocks
+    for asset in best_stocks:  # For each asset in the best stocks, get correlated
+        correlated = db.get_correlated(asset.id, inverse=True, threshold=0.2)  # Get assets with negative correlation
+        correlated_assets = db.get_assets(assets=[x[0] for x in correlated],
+                                          type=['STOCK', 'FUND', 'INDEX', 'PORTFOLIO',
+                                                'ETF_FUND'], threshold=0)  # elect the corresponding assets
+        for c in correlated_assets:
+            if c.id not in correl_asset_id:
+                correl_asset_id.add(c.id)
+                correl_assets.append(c)
+        list_correlation += [(x[0], x[1], asset) for x in correlated]
+
+    sharpes = [a.sharpe for a in best_stocks]
+    sorted_assets = correl_assets
+    heapq._heapify_max(sorted_assets)
+
+    print(f'correl asset list size: {len(sorted_assets)}')
+    for i in range(size, min(size + len(sorted_assets), 40)):
+        asset = heapq._heappop_max(sorted_assets)
+        best_stocks.append(asset)
+        sharpes.append(asset.sharpe)
+        weights = compute_weights(sharpes)
+        print(f'weights : {weights}')
+        aw = [(a.id, w) for (a, w) in zip(best_stocks, weights)]
+        submit_portfolio(build_portfolio(aw))
+
+
+def generate_portfolio_8(size: int = 20):
+    stocks = db.get_assets(type='STOCK', threshold=0.0)  # Select stocks, ordered by sharpe
+    best_stocks = stocks[0:size]
+    correl_assets = []
+    correl_asset_id = set()
+    list_correlation = []
+    # Get negatively correlated stocks
+    for asset in best_stocks:  # For each asset in the best stocks, get correlated
+        correlated = db.get_correlated(asset.id, inverse=True,
+                                       threshold=0.2)  # Get assets with negative correlation
+        correlated_assets = db.get_assets(assets=[x[0] for x in correlated],
+                                          type=['STOCK', 'FUND', 'INDEX', 'PORTFOLIO',
+                                                'ETF_FUND'], threshold=0)  # elect the corresponding assets
+        for c in correlated_assets:
+            if c.id not in correl_asset_id:
+                correl_asset_id.add(c.id)
+                correl_assets.append(c)
+        list_correlation += [(x[0], x[1], asset) for x in correlated]
+    sharpes = [a.sharpe for a in best_stocks]
+
+    correl_assets = sorted(correl_assets, reverse=True)
+    sorted_assets = correl_assets[0: size]
+    for s in sorted_assets:
+        sharpes.append(s.sharpe)
+    weights = compute_weights(sharpes[0:int(size/2)])
+    weights += compute_weights(sharpes[int(size/2):])
+    for i in range(len(weights)):
+        weights[i] /= 2
+    aw = [(a.id, w) for (a, w) in zip(best_stocks + sorted_assets, weights)]
+    submit_portfolio(build_portfolio(aw))
+
+    for i in range(size):
+        weights[i] = 0.1
+        for j in range(size):
+            if j != i:
+                weights[j] = 0.4/(size-1)
+        for j in range(size):
+            weights[j+size] = 0.1
+            for k in range(size, size * 2):
+                if k != j + size:
+                    weights[k] = 0.4/(size-1)
+
+            print(f'weights : {weights}')
+            aw = [(a.id, w) for (a, w) in zip(best_stocks + sorted_assets, weights)]
+            submit_portfolio(build_portfolio(aw))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
