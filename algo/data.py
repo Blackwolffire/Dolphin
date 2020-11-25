@@ -119,3 +119,10 @@ def check_portfolio(db):
             print(f"INVALID: weight = {w}")
             return False
     return True
+
+
+def get_decimal(asset_id):
+    res = requests.get(
+        URL + f'/asset/{asset_id}/attribute/asset_fund_info_decimalisation',
+        verify=False, auth=AUTH)
+    return res
