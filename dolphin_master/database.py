@@ -7,7 +7,12 @@ from algo.portfolio import Portfolio
 
 class Database:
     def __init__(self):
-        engine_url = f'sqlite:///portfolios.sqlite'
+        username = os.getenv('PSQL_USERNAME', 'worker')
+        password = os.getenv('PSQL_PASSWORD', 'worker')
+        host = os.getenv('PSQL_HOST', 'worker')
+        port = os.getenv('PSQL_PORT', 5432)
+        engine_url = f'postgresql://{username}:{password}@{host}:{port}/portfolios'
+        #engine_url = f'sqlite:///portfolios.sqlite'
         self.db_engine = create_engine(engine_url)
         self.portfolio_table = None
         self.asset_table = None
@@ -25,7 +30,7 @@ class Database:
                                  )
 
         self.asset_table = Table('asset', metadata,
-                                 Column('portfolio_id', None, ForeignKey("portfolio.id")),
+                                 Column('portfolio_id', Integer),
                                  Column('asset_id', Integer, nullable=False),
                                  Column('quantity', Float, nullable=False),
                                  )
@@ -39,11 +44,13 @@ class Database:
         created = time.time()
         cmd = self.portfolio_table.insert().values(created=created)
         res = self.db_engine.execute(cmd)
-        id = res.lastrowid
+        id = res.inserted_primary_key
         for asset in portfolio.get_assets():
-            self.store_asset(id, asset[0], asset[1])
+            print(id)
+            print(int(id[0]))
+            self.store_asset(int(id[0]), asset[0], asset[1])
 
-        return id
+        return int(id[0])
 
     def get_portfolio(self, pf_id: int, assets=True):
         pf = Portfolio()
@@ -76,12 +83,13 @@ class Database:
         self.db_engine.execute(cmd)
 
     def get_best_custom_portfolios(self, n=10):
-        cmd = self.portfolio_table.select().where(self.portfolio_table.c.sharpe == None).order_by(self.portfolio_table.c.custom_sharpe).limit(n)
+        cmd = self.portfolio_table.select().where(self.portfolio_table.c.sharpe == None).where(self.portfolio_table.c.custom_sharpe != None).order_by(self.portfolio_table.c.custom_sharpe.desc()).limit(n)
+        print(cmd)
         res = self.db_engine.execute(cmd)
         return [x for x in res.fetchall()]
 
     def get_best_portfolio(self):
-        cmd = self.portfolio_table.select().order_by(self.portfolio_table.c.sharpe.desc()).limit(1)
+        cmd = self.portfolio_table.select().where(self.portfolio_table.c.sharpe != None).order_by(self.portfolio_table.c.sharpe.desc()).limit(1)
         res = self.db_engine.execute(cmd)
         best = [x for x in res.fetchall()]
 

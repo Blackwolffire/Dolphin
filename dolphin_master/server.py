@@ -48,8 +48,8 @@ def get_info() -> dict:
     except Exception as e:
         print(e)
         total_calculated = 0
-    print(total_calculated)
-    best_pf = db.get_best_portfolio() if db.get_best_portfolio() else [0, 0, 0, 0]
+    best_pf = db.get_best_portfolio()
+    print(best_pf)
     info = {
         'best_sharpe': str(best_pf[3]),
         'best_portfolio': db.get_portfolio(best_pf[0]).get_assets() if best_pf[0] != 0 else [[0,0]],
@@ -103,25 +103,28 @@ async def store_new_sharpe(pf_id: int, request: Request):
 async def receive_new_portfolio(request: Request):
     data = await request.json()
     pf = Portfolio()
-    # TODO: check if exists
     for asset in data['assets']:
         pf.add_asset(asset[0], asset[1])
     new_pfs.add(pf)
     return 'OK'
 
+@app.get('/check_jump/{size}')
+def check_jump(size: int):
+    jump_check_thread(size)
 
-def jump_check_thread():
-    while True:
-        # Get best portfolios
-        pfs = db.get_best_custom_portfolios(15)
+def jump_check_thread(size: int):
+    # Get best portfolios
+    try:
+        pfs = db.get_best_custom_portfolios(size)
         pf_asset = market_db.get_portfolio_asset()
         for pf in pfs:
+            print(pf)
             portfolio = db.get_portfolio(pf[0])
             portfolio.asset = pf_asset
             data.update_portfolio(portfolio)
             data.update_portfolio(portfolio) # Update twice for jump
             sharpe = data.get_pf_sharpe(portfolio.asset)
-            db.add_jump_sharpe(pf[0], sharpe)
+            db.add_jump_sharpe(pf[0], sharpe) # Not thread safe here
             client.write_points([{
                 "measurement": "sharpe",
                 "fields": {
@@ -134,11 +137,15 @@ def jump_check_thread():
         best_portfolio.asset = pf_asset
         data.update_portfolio(best_portfolio)
         data.update_portfolio(best_portfolio)
-        time.sleep(60)  # Every minute
+    except Exception as e:
+        print(e)
 
+def worker_thread():
+    while True:
+        jump_check_thread(50)
+        time.sleep(30)
 
 if __name__ == '__main__':
-    thread = Thread(target=jump_check_thread)
+    thread = Thread(target=worker_thread)
     thread.start()
     uvicorn.run(app, host="0.0.0.0", port=8000)
-    thread.join()

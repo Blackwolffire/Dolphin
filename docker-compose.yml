@@ -1,16 +1,24 @@
 version: '3'
 services:
-  #postgres:
-  #  image: postgres
-  #  environment:
-  #      POSTGRES_USER: user
-  #      POSTGRES_PASSWORD: pass
-  #      POSTGRES_DB: portfolios
-  #  restart: unless-stopped
-  #  volumes:
-  #    - ./postgres-data:/var/lib/postgresql/data
-  #  ports:
-  #    - "5432:5432"
+  postgres:
+    image: postgres
+    environment:
+        POSTGRES_USER: worker
+        POSTGRES_PASSWORD: worker
+        POSTGRES_DB: portfolios
+    restart: unless-stopped
+    volumes:
+      - ../postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+       PGADMIN_DEFAULT_EMAIL: 'user@domain.com'
+       PGADMIN_DEFAULT_PASSWORD: '@dm1n'
+    ports:
+      - "80:80"
 
   influxdb:
     image: influxdb:alpine
@@ -36,5 +44,6 @@ services:
       - "8000:8000"
     environment:
       - INFLUX_HOST=influxdb
-      - DOLPHIN_USERNAME=
-      - DOLPHIN_PASSWORD=
+      - DOLPHIN_USERNAME=EPITA_GROUPE12
+      - DOLPHIN_PASSWORD=PASSWORD
+      - PSQL_HOST=postgres
