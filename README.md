@@ -11,3 +11,8 @@ This allowed to run multiple consumers on several servers, each computing sharpe
 We were able to compute the sharpe ratio of 2pf/second, much faster than the JUMP Api which allowed us 0.1pf/second.
 
 ### Mathematics and algorithms
+
+The Sharpe Ratio = (Excess Return)/Volatility.
+
+We computed the Excess Return as the return between the start and the end of the period, annualized, minus 0.05%.
+We computed the volatility as the standard deviation of the daily returns, annualized.
