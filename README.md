@@ -17,5 +17,5 @@ We computed the Excess Return as the return between the start and the end of the
 We computed the volatility as the standard deviation of the daily returns, annualized.
 
 ### Generation of Portfolio
-We started by choosing the 15 best assets according to their sharpe ratio and tried to add other good asset or decorrelated
+We started by choosing the 15 best assets according to their sharpe ratio and tried to add other good assets or decorrelated
 assets. Then tuned the weight of each asset in a portfolio according to the sharpe ratio again.
