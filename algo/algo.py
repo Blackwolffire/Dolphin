@@ -71,7 +71,6 @@ def build_portfolio(assets: list) -> Portfolio:
     # assets = [(4354, 0.005), ...]
     amount = 1
     pf = Portfolio()
-
     for a in assets:
         asset = db.get_assets(assets=[a[0]], data_frame=True)
         price = asset.close.iloc[0]
@@ -81,7 +80,7 @@ def build_portfolio(assets: list) -> Portfolio:
         amount *= price
 
     amount *= 100
-    print(amount)
+    #print(amount)
     for a in assets:
         asset = db.get_assets(assets=[a[0]], data_frame=True)
         price = asset.close.iloc[0]
@@ -96,7 +95,7 @@ def build_portfolio(assets: list) -> Portfolio:
 def submit_portfolio(pf: Portfolio):
     payload = json.dumps({'assets': pf.get_assets()})
     print(payload)
-    res = requests.post('http://192.168.1.11:8000/new_pf', data=payload)
+    res = requests.post('http://api.finance.debuisne.fr/new_pf', data=payload)
     sleep(0.05)
     return res.status_code
 
@@ -146,7 +145,9 @@ def compute_weights(sharpes):
             weights[i] = 0.1
         if weights[i] < 0.01:
             weights[i] = 0.01
-    while gap > 0.0:
+    pgap = 0.0
+    while gap > 0.0 and gap != pgap:
+        pgap = gap
         maxi = 0
         for i in range(1, len(weights)):
             if weights[i] < 0.1 and (weights[i] > weights[maxi] or weights[maxi] >= 0.1):
@@ -248,8 +249,8 @@ def generate_portfolio_6(size: int = 20):
         sharpes.append(ob.sharpe)
     weights = compute_weights(sharpes[0:int(size/2)])
     weights += compute_weights(sharpes[int(size/2):])
-    for i in range(len(weights)):
-        weights[i] /= 2
+    #for i in range(len(weights)):
+     #   weights[i] /= 2
     aw = [(a.id, w) for (a, w) in zip(best_stocks + other_b_stocks, weights)]
     submit_portfolio(build_portfolio(aw))
 
@@ -379,22 +380,59 @@ def generate_portfolio_8(size: int = 20):
             submit_portfolio(build_portfolio(aw))
 
 
-def generate_portfolio_ftw(size: int = 40):
+def generate_portfolio_ftw(size: int = 15):
     assets = db.get_assets(threshold=0.0)  # Select stocks, ordered by sharpe
     best_assets = assets[0:size]
 
-    pf_stock = []
-    pf_other = []
-    for a in best_assets:
-        if a.type == 'STOCK':
-            pf_stock.append(a)
-        else:
-            pf_other.append(a)
-    sharpes = [a.sharpe for a in pf_stock+pf_other]
-    weights = compute_weights(sharpes[0:len(pf_stock)])
-    weights += compute_weights(sharpes[len(pf_stock):])
-    for i in range(len(weights)):
-        weights[i] /= 2
-    print(f'weights : {weights}')
-    aw = [(a.id, w) for (a, w) in zip(pf_stock+pf_other, weights)]
-    submit_portfolio(build_portfolio(aw))
+
+    correl_assets = []
+    correl_asset_id = set()
+    list_correlation = []
+    # Get negatively correlated stocks
+    for asset in best_assets:  # For each asset in the best stocks, get correlated
+        correlated = db.get_correlated(asset.id, inverse=True,
+                                       threshold=0)  # Get assets with negative correlation (id, cor)
+        correlated_assets = db.get_assets(assets=[x[0] for x in correlated],
+                                          type=['STOCK', 'FUND', 'INDEX', 'PORTFOLIO',
+                                                'ETF_FUND'], threshold=0)  # elect the corresponding assets
+        for c in correlated_assets:
+            if c.id not in correl_asset_id:
+                correl_asset_id.add(c.id)
+                correl_assets.append(c)
+        list_correlation += [(x[1], x[0], asset) for x in correlated]
+
+    sorted(list_correlation)
+    len_decor = len(list_correlation)
+    mini = min(size + len_decor, 40)
+    print(list_correlation)
+    print(f'max pf size: {mini}')
+    while len(best_assets) < 14:
+        decor_asset = list_correlation.pop(0)
+        best_assets.append(db.get_assets(assets=[decor_asset[1]])[0])
+
+    for i in range(size, mini):
+        decor_asset = list_correlation.pop(0)
+        best_assets.append(db.get_assets(assets=[decor_asset[1]])[0])
+        pf_stock = []
+        pf_other = []
+        for a in best_assets:
+            if a.type == 'STOCK':
+                pf_stock.append(a)
+            else:
+                pf_other.append(a)
+        sharpes = [a.sharpe for a in pf_stock+pf_other]
+        weights = compute_weights(sharpes[0:len(pf_stock)])
+        weights += compute_weights(sharpes[len(pf_stock):])
+        for j in range(len(weights)):
+            weights[j] /= 2
+        print(f'weights : {weights}')
+        aw = [(a.id, w) for (a, w) in zip(pf_stock+pf_other, weights)]
+        submit_portfolio(build_portfolio(aw))
+        #pf = build_portfolio(aw)
+        #pf.asset = db.get_portfolio_asset()
+        #data.update_portfolio(pf)
+        #sleep(4)
+        #data.update_portfolio(pf)
+        #sleep(4)
+        #sharpe = data.get_pf_sharpe(pf.asset)
+        #print(f'SHARPE: {sharpe}')

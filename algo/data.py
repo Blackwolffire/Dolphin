@@ -19,14 +19,13 @@ PASSWORD = getenv('DOLPHIN_PASSWORD', None)
 
 START_DATE = '2016-06-01'
 END_DATE = '2020-09-30'
-BUDGET = 1000000000
+BUDGET = 100000000000
 
 AUTH = (USERNAME, PASSWORD)
 
 
 def get_assets(date: str) -> [Asset]:
     res = requests.get(URL + f'/asset?columns=ASSET_DATABASE_ID&columns=LABEL&columns=LAST_CLOSE_VALUE_IN_CURR&columns=TYPE&date={date}', verify=False, auth=AUTH)
-    print(res.json())
     return [Asset(x, date) for x in res.json()]
 
 
@@ -52,7 +51,6 @@ def get_pf_sharpe(asset: Asset):
 
 def get_portfolio(asset: Asset) -> Portfolio:
     res = requests.get(URL + f'/portfolio/{asset.id}/dyn_amount_compo', auth=AUTH)
-    print(res.json())
     return Portfolio(res.json(), asset)
 
 
@@ -67,7 +65,6 @@ def get_portfolio_quotes(asset: Asset):
 
 def update_portfolio(portfolio: Portfolio) -> bool:
     res = requests.put(URL + f'/portfolio/{portfolio.asset.id}/dyn_amount_compo', auth=AUTH, data=portfolio.json())
-    print(res.json())
     return res.status_code == 200
 
 
