@@ -379,15 +379,22 @@ def generate_portfolio_8(size: int = 20):
             submit_portfolio(build_portfolio(aw))
 
 
+def generate_portfolio_ftw(size: int = 40):
+    assets = db.get_assets(threshold=0.0)  # Select stocks, ordered by sharpe
+    best_assets = assets[0:size]
 
-
-
-
-
-
-
-
-
-
-
-
+    pf_stock = []
+    pf_other = []
+    for a in best_assets:
+        if a.type == 'STOCK':
+            pf_stock.append(a)
+        else:
+            pf_other.append(a)
+    sharpes = [a.sharpe for a in pf_stock+pf_other]
+    weights = compute_weights(sharpes[0:len(pf_stock)])
+    weights += compute_weights(sharpes[len(pf_stock):])
+    for i in range(len(weights)):
+        weights[i] /= 2
+    print(f'weights : {weights}')
+    aw = [(a.id, w) for (a, w) in zip(pf_stock+pf_other, weights)]
+    submit_portfolio(build_portfolio(aw))
